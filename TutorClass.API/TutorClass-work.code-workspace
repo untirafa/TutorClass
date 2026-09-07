@@ -1,0 +1,28 @@
+{
+	"folders": [
+		{
+			"path": "../.dist"
+		},
+		{
+			"path": "../.git"
+		},
+		{
+			"path": "../.vs"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../TutorClass.Application"
+		},
+		{
+			"path": "../TutorClass.Domain"
+		},
+		{
+			"path": "../TutorClass.Infrastructure"
+		},
+		{
+			"path": "../TutorClass.Tests"
+		}
+	]
+}

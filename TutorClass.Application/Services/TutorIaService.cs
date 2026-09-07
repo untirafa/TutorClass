@@ -1,0 +1,226 @@
+using System.Collections.Concurrent;
+using TutorClass.Application.Abstractions;
+using TutorClass.Application.DTOs;
+using TutorClass.Domain.Common;
+using TutorClass.Domain.Plans;
+using TutorClass.Domain.Users;
+
+namespace TutorClass.Application.Services;
+
+public sealed class TutorIaService
+{
+    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> AlunoLocks = new();
+
+    private readonly IApplicationDbContext _db;
+    private readonly ITutorIaProvider _provider;
+
+    public TutorIaService(IApplicationDbContext db, ITutorIaProvider provider)
+    {
+        _db = db;
+        _provider = provider;
+    }
+
+    public Task<TutorIaStatusResponse> ObterStatusAsync(Guid alunoId, CancellationToken cancellationToken)
+    {
+        EnsureAlunoAtivo(alunoId);
+        return Task.FromResult(BuildStatus(alunoId));
+    }
+
+    public async Task<TutorIaChatResponse> ConversarAsync(Guid alunoId, TutorIaChatRequest request, CancellationToken cancellationToken)
+    {
+        EnsureAlunoAtivo(alunoId);
+
+        if (string.IsNullOrWhiteSpace(request.Mensagem))
+        {
+            throw new DomainException("Mensagem para a TutorIA e obrigatoria.");
+        }
+
+        if (request.Mensagem.Length > 2000)
+        {
+            throw new DomainException("Mensagem para a TutorIA deve possuir no maximo 2000 caracteres.");
+        }
+
+        var alunoLock = AlunoLocks.GetOrAdd(alunoId, _ => new SemaphoreSlim(1, 1));
+        await alunoLock.WaitAsync(cancellationToken);
+        try
+        {
+            var statusAntes = BuildStatus(alunoId);
+            if (!statusAntes.PossuiAcesso)
+            {
+                return Bloqueado(statusAntes);
+            }
+
+            string resposta;
+            try
+            {
+                resposta = await _provider.ResponderAsync(
+                    new TutorIaProviderRequest(alunoId, statusAntes.Plano, request.Mensagem.Trim(), GetHojeBrasil()),
+                    cancellationToken);
+            }
+            catch
+            {
+                var statusAtual = BuildStatus(alunoId);
+                return new TutorIaChatResponse(
+                    TutorIaPrompts.Nome,
+                    false,
+                    statusAtual.Plano,
+                    "ERRO_TUTORIA",
+                    "A TutorIA nao conseguiu responder agora. Tente novamente em alguns instantes.",
+                    null,
+                    statusAtual.LimiteDiario,
+                    statusAtual.UsadasHoje,
+                    statusAtual.RestantesHoje,
+                    statusAtual.LimiteAtingido,
+                    false,
+                    false);
+            }
+
+            RegistrarUso(alunoId);
+            await _db.SaveChangesAsync(cancellationToken);
+
+            var statusDepois = BuildStatus(alunoId);
+            return new TutorIaChatResponse(
+                TutorIaPrompts.Nome,
+                true,
+                statusDepois.Plano,
+                null,
+                "Resposta gerada pela TutorIA.",
+                resposta,
+                statusDepois.LimiteDiario,
+                statusDepois.UsadasHoje,
+                statusDepois.RestantesHoje,
+                statusDepois.LimiteAtingido,
+                false,
+                false);
+        }
+        finally
+        {
+            alunoLock.Release();
+        }
+    }
+
+    private TutorIaStatusResponse BuildStatus(Guid alunoId)
+    {
+        var plano = ObterPlanoAtual(alunoId);
+        var hoje = GetHojeBrasil();
+        var usadasHoje = _db.UsosIaAluno.SingleOrDefault(u => u.AlunoId == alunoId && u.Data == hoje)?.Quantidade ?? 0;
+
+        return plano switch
+        {
+            PlanoAluno.Gratuito => new TutorIaStatusResponse(
+                TutorIaPrompts.Nome,
+                false,
+                plano,
+                0,
+                usadasHoje,
+                0,
+                false,
+                "PLANO_SEM_TUTORIA",
+                true,
+                "A TutorIA nao esta disponivel no plano Gratuito."),
+
+            PlanoAluno.Foco when usadasHoje >= PlanoAlunoService.LimiteIaFocoPorDia => new TutorIaStatusResponse(
+                TutorIaPrompts.Nome,
+                false,
+                plano,
+                PlanoAlunoService.LimiteIaFocoPorDia,
+                usadasHoje,
+                0,
+                true,
+                "LIMITE_DIARIO_ATINGIDO",
+                true,
+                "Voce atingiu o limite diario da TutorIA no plano Foco. Suas 7 mensagens de hoje ja foram utilizadas. Seu acesso sera renovado automaticamente amanha."),
+
+            PlanoAluno.Foco => new TutorIaStatusResponse(
+                TutorIaPrompts.Nome,
+                true,
+                plano,
+                PlanoAlunoService.LimiteIaFocoPorDia,
+                usadasHoje,
+                PlanoAlunoService.LimiteIaFocoPorDia - usadasHoje,
+                false,
+                null,
+                false,
+                $"{usadasHoje} de {PlanoAlunoService.LimiteIaFocoPorDia} mensagens utilizadas hoje."),
+
+            PlanoAluno.Mentoria => new TutorIaStatusResponse(
+                TutorIaPrompts.Nome,
+                true,
+                plano,
+                null,
+                usadasHoje,
+                null,
+                false,
+                null,
+                false,
+                "TutorIA disponivel no plano Mentoria, sem limite diario imposto pelo plano."),
+
+            _ => throw new DomainException("Plano do aluno invalido.")
+        };
+    }
+
+    private static TutorIaChatResponse Bloqueado(TutorIaStatusResponse status)
+    {
+        return new TutorIaChatResponse(
+            TutorIaPrompts.Nome,
+            false,
+            status.Plano,
+            status.Motivo,
+            status.Mensagem,
+            null,
+            status.LimiteDiario,
+            status.UsadasHoje,
+            status.RestantesHoje,
+            status.LimiteAtingido,
+            status.PodeConhecerPlanos,
+            status.Motivo == "LIMITE_DIARIO_ATINGIDO");
+    }
+
+    private void RegistrarUso(Guid alunoId)
+    {
+        var hoje = GetHojeBrasil();
+        var uso = _db.UsosIaAluno.SingleOrDefault(u => u.AlunoId == alunoId && u.Data == hoje);
+        if (uso is null)
+        {
+            uso = new UsoIaAluno(alunoId, hoje);
+            _db.AddEntity(uso);
+        }
+
+        uso.RegistrarUso();
+    }
+
+    private PlanoAluno ObterPlanoAtual(Guid alunoId)
+    {
+        return _db.AssinaturasAluno
+            .Where(a => a.AlunoId == alunoId && a.Ativa)
+            .OrderByDescending(a => a.DataInicioUtc)
+            .Select(a => a.Plano)
+            .FirstOrDefault();
+    }
+
+    private void EnsureAlunoAtivo(Guid alunoId)
+    {
+        if (!_db.Usuarios.OfType<Aluno>().Any(a => a.Id == alunoId && a.Ativo))
+        {
+            throw new DomainException("Aluno nao encontrado ou inativo.");
+        }
+    }
+
+    public static DateOnly GetHojeBrasil()
+    {
+        var timeZone = ResolveBrazilTimeZone();
+        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone));
+    }
+
+    private static TimeZoneInfo ResolveBrazilTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+        }
+    }
+}

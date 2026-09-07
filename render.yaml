@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: tutorclass-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Swagger__Enabled
+        value: "true"
+      - key: ConnectionStrings__TutorClassDb
+        sync: false
+      - key: Jwt__Secret
+        sync: false
+      - key: Jwt__Issuer
+        value: TutorClass
+      - key: Jwt__Audience
+        value: TutorClass.Client
+      - key: Jwt__ExpirationMinutes
+        value: "120"
+      - key: MongoDb__ConnectionString
+        sync: false
+      - key: MongoDb__DatabaseName
+        sync: false
+      - key: Cors__AllowedOrigins__0
+        sync: false

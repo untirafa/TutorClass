@@ -3,6 +3,7 @@ using TutorClass.Application.DTOs;
 using TutorClass.Domain.Common;
 using TutorClass.Domain.Lessons;
 using TutorClass.Domain.Materials;
+using TutorClass.Domain.Notifications;
 using TutorClass.Domain.Users;
 
 namespace TutorClass.Application.Services;
@@ -10,10 +11,17 @@ namespace TutorClass.Application.Services;
 public sealed class MaterialPedagogicoService
 {
     private readonly IApplicationDbContext _db;
+    private readonly NotificacaoService _notificacoes;
 
     public MaterialPedagogicoService(IApplicationDbContext db)
+        : this(db, new NotificacaoService(db))
+    {
+    }
+
+    public MaterialPedagogicoService(IApplicationDbContext db, NotificacaoService notificacoes)
     {
         _db = db;
+        _notificacoes = notificacoes;
     }
 
     public async Task<MaterialResponse> CriarAsync(Guid professorId, CriarMaterialRequest request, CancellationToken cancellationToken)
@@ -39,6 +47,7 @@ public sealed class MaterialPedagogicoService
             request.UrlArquivo);
 
         _db.AddEntity(material);
+        CriarNotificacaoNovoMaterial(material);
         await _db.SaveChangesAsync(cancellationToken);
         return ToResponse(material);
     }
@@ -187,6 +196,23 @@ public sealed class MaterialPedagogicoService
         {
             throw new DomainException("Materia nao encontrada.");
         }
+    }
+
+    private void CriarNotificacaoNovoMaterial(MaterialPedagogico material)
+    {
+        var professorNome = _db.Professores
+            .Where(p => p.Id == material.ProfessorId)
+            .Select(p => p.Nome)
+            .SingleOrDefault() ?? "Seu professor";
+
+        _notificacoes.CriarSeNaoExistir(
+            material.AlunoId,
+            TipoNotificacao.NovoMaterial,
+            "Novo material disponivel",
+            $"{professorNome} disponibilizou o material \"{material.Titulo}\" para voce.",
+            "/materiais",
+            material.Id,
+            $"NOVO_MATERIAL:{material.Id}:{material.AlunoId}");
     }
 
     private MaterialResponse ToResponse(MaterialPedagogico material)

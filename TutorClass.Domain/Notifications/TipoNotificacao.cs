@@ -12,5 +12,6 @@ public enum TipoNotificacao
     MentoriaEncerrada = 8,
     MentorAlterado = 9,
     PagamentoConfirmado = 10,
-    AssinaturaConfirmada = 11
+    AssinaturaConfirmada = 11,
+    NovoMaterial = 12
 }

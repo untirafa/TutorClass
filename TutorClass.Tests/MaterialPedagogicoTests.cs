@@ -4,8 +4,10 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using TutorClass.Application.DTOs;
+using TutorClass.Application.Services;
 using TutorClass.Domain.Lessons;
 using TutorClass.Domain.Materials;
+using TutorClass.Domain.Notifications;
 using TutorClass.Domain.Subjects;
 using TutorClass.Domain.Teachers;
 using TutorClass.Domain.Users;
@@ -30,6 +32,89 @@ public sealed class MaterialPedagogicoTests
         Assert.Equal(cenario.ProfessorId, material!.ProfessorId);
         Assert.Equal(cenario.AlunoId, material.AlunoId);
         Assert.Equal(cenario.AulaId, material.AulaId);
+    }
+
+    [Fact]
+    public async Task Material_criado_para_aluno_gera_notificacao_nao_lida_somente_para_aluno_correto()
+    {
+        await using var factory = new TutorClassApiFactory();
+        var cenario = await SeedCenarioAsync(factory);
+        var client = factory.CreateClient();
+        await AuthorizeAsync(client, cenario.ProfessorEmail);
+
+        var response = await client.PostAsJsonAsync("/api/materiais", CriarRequest(cenario));
+        var material = await response.Content.ReadFromJsonAsync<MaterialResponse>();
+
+        response.EnsureSuccessStatusCode();
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TutorClassDbContext>();
+        var notificacao = Assert.Single(db.Notificacoes.Where(n =>
+            n.UsuarioId == cenario.AlunoId &&
+            n.Tipo == TipoNotificacao.NovoMaterial &&
+            n.ReferenciaId == material!.Id));
+
+        Assert.False(notificacao.Lida);
+        Assert.Equal("/materiais", notificacao.RotaAcao);
+        var chaveEvento = $"NOVO_MATERIAL:{material!.Id}:{cenario.AlunoId}".ToUpperInvariant();
+        Assert.Equal(chaveEvento, notificacao.ChaveEvento);
+        Assert.DoesNotContain(db.Notificacoes, n => n.UsuarioId == cenario.OutroAlunoId && n.Tipo == TipoNotificacao.NovoMaterial);
+        Assert.DoesNotContain(db.Notificacoes, n => n.UsuarioId == cenario.ResponsavelId && n.Tipo == TipoNotificacao.NovoMaterial);
+
+        var alunoClient = factory.CreateClient();
+        await AuthorizeAsync(alunoClient, cenario.AlunoEmail);
+        var resumo = await alunoClient.GetFromJsonAsync<NotificacaoResumoResponse>("/api/notificacoes/resumo");
+
+        Assert.Equal(1, resumo!.NaoLidas);
+    }
+
+    [Fact]
+    public async Task Chave_evento_de_novo_material_e_idempotente()
+    {
+        await using var factory = new TutorClassApiFactory();
+        var cenario = await SeedCenarioAsync(factory);
+        var client = factory.CreateClient();
+        await AuthorizeAsync(client, cenario.ProfessorEmail);
+
+        var response = await client.PostAsJsonAsync("/api/materiais", CriarRequest(cenario));
+        var material = await response.Content.ReadFromJsonAsync<MaterialResponse>();
+        response.EnsureSuccessStatusCode();
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TutorClassDbContext>();
+        var service = new NotificacaoService(db);
+        var chave = $"NOVO_MATERIAL:{material!.Id}:{cenario.AlunoId}";
+        var chaveNormalizada = chave.ToUpperInvariant();
+
+        service.CriarSeNaoExistir(
+            cenario.AlunoId,
+            TipoNotificacao.NovoMaterial,
+            "Novo material disponivel",
+            "Mensagem repetida.",
+            "/materiais",
+            material.Id,
+            chave);
+
+        await db.SaveChangesAsync();
+
+        Assert.Single(db.Notificacoes.Where(n => n.ChaveEvento == chaveNormalizada));
+    }
+
+    [Fact]
+    public async Task Material_com_criacao_falha_nao_gera_notificacao()
+    {
+        await using var factory = new TutorClassApiFactory();
+        var cenario = await SeedCenarioAsync(factory);
+        var client = factory.CreateClient();
+        await AuthorizeAsync(client, cenario.OutroProfessorEmail);
+
+        var response = await client.PostAsJsonAsync("/api/materiais", CriarRequest(cenario));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TutorClassDbContext>();
+        Assert.DoesNotContain(db.Notificacoes, n => n.Tipo == TipoNotificacao.NovoMaterial);
     }
 
     [Fact]
@@ -188,9 +273,13 @@ public sealed class MaterialPedagogicoTests
         var outroProfessor = CreateProfessor("Outro Professor", "outro.prof.material@teste.local", hasher);
         var aluno = CreateAluno("Aluno Material", "aluno.material@teste.local", hasher);
         var outroAluno = CreateAluno("Outro Aluno", "outro.aluno.material@teste.local", hasher);
+        var responsavel = CreateResponsavel("Responsavel Material", "responsavel.material@teste.local", hasher);
         var materia = new Materia("Matematica Material");
 
-        db.AddRange(professor, outroProfessor, aluno, outroAluno, materia);
+        db.AddRange(professor, outroProfessor, aluno, outroAluno, responsavel, materia);
+        await db.SaveChangesAsync();
+
+        db.Add(new ResponsavelAluno(responsavel.Id, aluno.Id, "Responsavel financeiro"));
         await db.SaveChangesAsync();
 
         var aula = new Aula(aluno.Id, professor.Id, materia.Id, DateTime.UtcNow.AddDays(1), 60, 80m);
@@ -206,6 +295,7 @@ public sealed class MaterialPedagogicoTests
             aluno.Email,
             outroAluno.Id,
             outroAluno.Email,
+            responsavel.Id,
             materia.Id,
             aula.Id);
     }
@@ -226,6 +316,13 @@ public sealed class MaterialPedagogicoTests
         return aluno;
     }
 
+    private static Responsavel CreateResponsavel(string nome, string email, IPasswordHasher<Usuario> hasher)
+    {
+        var responsavel = new Responsavel(nome, email, "pending");
+        responsavel.DefinirPasswordHash(hasher.HashPassword(responsavel, "TutorClass@123"));
+        return responsavel;
+    }
+
     private static async Task AuthorizeAsync(HttpClient client, string email)
     {
         var response = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "TutorClass@123"));
@@ -243,6 +340,7 @@ public sealed class MaterialPedagogicoTests
         string AlunoEmail,
         Guid OutroAlunoId,
         string OutroAlunoEmail,
+        Guid ResponsavelId,
         Guid MateriaId,
         Guid AulaId);
 }

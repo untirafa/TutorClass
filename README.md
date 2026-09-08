@@ -234,6 +234,50 @@ Fluxo manual rapido pelo Swagger:
 8. Ainda como Camila, tente acessar o `aulaId` de Ana ou Bruno: esperado bloqueio por nao ser a aluna daquela aula.
 9. Use `GET /api/gravacoes/minhas` como Camila para listar apenas as gravacoes disponiveis dela.
 
+## Machine Learning e Analise de Dados
+
+O TutorClass possui um bloco academico simples de Machine Learning e Analise de Dados para gerar indicadores agregados do negocio ficticio.
+
+Os indicadores sao calculados a partir dos dados estruturados do PostgreSQL/Neon, como usuarios, professores, aulas, avaliacoes, assinaturas, mentorias e pagamentos simulados. O modulo nao usa MongoDB, nao analisa mensagens do chat da Mentoria e nao utiliza IA generativa.
+
+Indicadores disponiveis:
+
+- total de alunos ativos;
+- total de professores aprovados;
+- total de aulas;
+- aulas concluidas;
+- aulas canceladas;
+- media geral de avaliacoes;
+- quantidade de mentorias ativas;
+- assinaturas ativas por plano, incluindo alunos gratuitos sem assinatura paga;
+- materia mais procurada;
+- professor mais contratado;
+- receita simulada de comissao da plataforma;
+- repasses simulados aos professores;
+- adicionais simulados de Mentoria.
+
+O ranking de materias mostra quantidade de aulas, percentual sobre o total e uma tendencia simples (`Baixa`, `Media` ou `Alta`) baseada na comparacao entre os ultimos 30 dias e os 30 dias anteriores.
+
+A previsao de demanda por materia usa um classificador supervisionado simples por centroides. O modelo e treinado em memoria com um dataset academico pequeno de exemplos rotulados como `Baixa`, `Media` e `Alta`, e classifica as materias atuais usando features agregadas do banco:
+
+- aulas nos ultimos 30 dias;
+- aulas nos 30 dias anteriores;
+- crescimento percentual;
+- quantidade de alunos distintos;
+- taxa de conclusao.
+
+Essa implementacao e demonstrativa e explicavel. Ela existe para evidenciar uso de uma tecnica real e simples de Machine Learning no backend, nao para substituir uma solucao avancada de ciencia de dados, AutoML ou pipeline em cloud.
+
+Endpoints administrativos:
+
+```text
+GET /api/admin/analytics/resumo
+GET /api/admin/analytics/materias
+GET /api/admin/analytics/demanda-materias
+```
+
+Todos os endpoints de Analytics exigem perfil `Administrador` e retornam apenas dados agregados, sem e-mails, senhas, documentos, mensagens privadas ou conteudo de chat.
+
 ## FAQ e ChatBot de Ajuda
 
 O FAQ/ChatBot de Ajuda e um assistente simples baseado em perguntas e respostas cadastradas no PostgreSQL. Ele existe para explicar o funcionamento do TutorClass e nao utiliza IA, embeddings, NLP avancado, MongoDB, historico de conversa ou TutorIA.
@@ -346,6 +390,7 @@ Tipos atuais:
 - `MentorAlterado`
 - `PagamentoConfirmado`
 - `AssinaturaConfirmada`
+- `NovoMaterial`
 
 Eventos automaticos implementados:
 
@@ -359,6 +404,7 @@ Eventos automaticos implementados:
 - aluno troca mentor: professor antigo, novo professor e aluno recebem avisos;
 - pagamento de aula confirmado: pagador recebe aviso; se o pagador for responsavel, o vinculo Responsavel x Aluno ja foi validado pelo fluxo financeiro;
 - cobranca de assinatura confirmada: pagador recebe aviso.
+- professor disponibiliza material pedagogico: aluno destinatario recebe aviso.
 
 Notificacao nao e log. O backend cria apenas alertas relevantes para a experiencia do usuario.
 

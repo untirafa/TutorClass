@@ -57,6 +57,10 @@ builder.Services.AddSwaggerGen(options =>
         In = ParameterLocation.Header,
         Description = "Informe apenas o token JWT. O Swagger enviara como Bearer TOKEN."
     });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+    });
 
 });
 builder.Services.AddApplication();

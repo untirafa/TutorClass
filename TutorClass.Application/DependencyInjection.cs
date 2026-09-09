@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<MentoriaService>();
         services.AddScoped<FinanceiroService>();
         services.AddScoped<TutorIaService>();
+        services.AddSingleton<TutorIaMemoria>();
         services.AddScoped<IContextoIaService, ContextoIaService>();
         services.AddScoped<ITutorIaProvider, TutorIaSimuladaProvider>();
         services.AddScoped<MentoriaChatService>();

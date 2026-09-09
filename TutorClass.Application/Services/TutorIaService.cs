@@ -14,12 +14,14 @@ public sealed class TutorIaService
     private readonly IApplicationDbContext _db;
     private readonly ITutorIaProvider _provider;
     private readonly IContextoIaService _contexto;
+    private readonly TutorIaMemoria _memoria;
 
-    public TutorIaService(IApplicationDbContext db, ITutorIaProvider provider, IContextoIaService? contexto = null)
+    public TutorIaService(IApplicationDbContext db, ITutorIaProvider provider, IContextoIaService? contexto = null, TutorIaMemoria? memoria = null)
     {
         _db = db;
         _provider = provider;
         _contexto = contexto ?? new ContextoIaService(db);
+        _memoria = memoria ?? new TutorIaMemoria();
     }
 
     public Task<TutorIaStatusResponse> ObterStatusAsync(Guid alunoId, CancellationToken cancellationToken)
@@ -52,7 +54,7 @@ public sealed class TutorIaService
             try
             {
                 resposta = await _provider.ResponderAsync(
-                    new TutorIaProviderRequest(alunoId, statusAntes.Plano, request.Mensagem.Trim(), GetHojeBrasil(), contexto),
+                    new TutorIaProviderRequest(alunoId, statusAntes.Plano, request.Mensagem.Trim(), GetHojeBrasil(), contexto, _memoria.Obter(alunoId)),
                     cancellationToken);
                 if (string.IsNullOrWhiteSpace(resposta)) throw new InvalidOperationException("Resposta vazia.");
             }
@@ -78,6 +80,7 @@ public sealed class TutorIaService
             RegistrarUso(alunoId);
             await _db.SaveChangesAsync(cancellationToken);
 
+            _memoria.Registrar(alunoId, request.Mensagem.Trim(), resposta);
             var statusDepois = BuildStatus(alunoId);
             return new TutorIaChatResponse(
                 TutorIaPrompts.Nome,

@@ -35,4 +35,7 @@ public sealed record TutorIaProviderRequest(
     PlanoAluno Plano,
     string Mensagem,
     DateOnly DataReferencia,
-    ContextoIaAluno? Contexto = null);
+    ContextoIaAluno? Contexto = null,
+    IReadOnlyList<MensagemTutorIa>? Historico = null);
+
+public sealed record MensagemTutorIa(string Papel, string Texto);

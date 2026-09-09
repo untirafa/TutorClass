@@ -1199,7 +1199,7 @@ Configure `TutorIA:Provider=Simulado` para respostas locais de desenvolvimento/t
 - `Gemini__ApiKey`: chave privada, nunca versionar.
 - `Gemini__Model`: identificador do modelo habilitado na sua conta, sem prefixo `models/`.
 
-Essas mesmas tres variaveis devem ser cadastradas no painel Environment do Render. Se Gemini estiver selecionado, configuracao ausente/invalida impede a inicializacao; nao existe fallback para Simulado. Os testes HTTP fixam explicitamente Simulado.
+Essas mesmas tres variaveis devem ser cadastradas no painel Environment do Render. Se Gemini estiver selecionado, configuracao ausente/invalida impede a inicializacao; o fallback para Simulado fica desligado por padrao e so pode ser habilitado explicitamente para apresentacao. Os testes HTTP fixam explicitamente Simulado.
 
 O `ContextoIaService` consulta PostgreSQL por aluno autenticado no JWT. Nome vem de `Usuarios/Aluno`; plano vem da assinatura ativa mais recente (sem assinatura = Gratuito); quota vem de `UsoIaAluno` na data de Sao Paulo. Materias sao distintas, ordenadas por nome, exclusivamente de aulas nao canceladas do aluno (maximo 5). Proximas aulas sao confirmadas e futuras, ordenadas por inicio UTC e ID (maximo 5). Mentores vem de vinculos ativos com professores ativos, ordenados por slot e ID (maximo 2). O vinculo nao define materia, portanto o campo do mentor fica nulo. As listas sao limitadas no banco antes de materializar. O contexto nao inclui historico de conversa nem assuntos estudados inferidos.
 
@@ -1207,7 +1207,7 @@ Somente `mensagem` e recebida no request, obrigatoria e com ate 4.000 caracteres
 
 A instrucao central fica em `TutorIaPrompts`. A quota enviada corresponde ao instante anterior a resposta; sucesso incrementa o contador e a resposta HTTP contem a quota atualizada. Datas enviadas sao UTC e a instrucao pede apresentacao no fuso de Sao Paulo. Listas limitadas nao representam todo o historico.
 
-Timeout padrao: 30 segundos (`Gemini:TimeoutSeconds`, 1–120). Saida padrao: 1.024 tokens (`Gemini:MaxOutputTokens`, 1–8192). A chamada respeita CancellationToken; nao ha retries automaticos. Respostas HTTP 401/403, 429, 5xx, timeout, falha de rede, JSON inesperado, ausencia de candidates ou texto vazio retornam o contrato existente com `motivo=ERRO_TUTORIA` e mensagem: “A TutorIA está temporariamente indisponível. Tente novamente em alguns instantes.” O endpoint preserva HTTP 200 para esse contrato de erro de negocio.
+Timeout padrao: 30 segundos (`Gemini:TimeoutSeconds`, 1–120). Saida padrao: 1.024 tokens (`Gemini:MaxOutputTokens`, 1–8192). Cada tentativa respeita o timeout e CancellationToken. Apenas HTTP 503/429 tem ate tres tentativas, com esperas de 1s e 2s; nao ha retry para outros erros ou cancelamento. O tempo total pode chegar a cerca de 93s com timeout de 30s por tentativa. Falhas finais sem fallback (HTTP 401/403, 429, 5xx, timeout, rede, JSON inesperado, ausencia de candidates ou texto vazio) retornam o contrato existente com `motivo=ERRO_TUTORIA` e mensagem: “A TutorIA está temporariamente indisponível. Tente novamente em alguns instantes.” O endpoint preserva HTTP 200 para esse contrato de erro de negocio.
 
 Logs Gemini contem apenas provider, duracao, status HTTP, sucesso e categoria. Logs automaticos do HttpClient desse provider estao desabilitados; chave fica no header, nunca na URL. Prompt, contexto, resposta e excecoes brutas nao sao registrados.
 
@@ -1216,3 +1216,7 @@ A exclusao mutua por aluno existente permanece durante contexto, chamada e persi
 Validacao automatizada: `dotnet test TutorClass.Tests`. Para validacao real, iniciar a API em Development com User Secrets configurados e `TutorIA__Provider=Gemini`, autenticar um aluno de desenvolvimento com acesso e enviar ao endpoint existente as perguntas: “Responda apenas: TutorIA funcionando.”, “Qual é o meu plano?”, “Quantas mensagens ainda tenho hoje?”, “Quando é minha próxima aula?”, “Quem são meus mentores?” e “Explique orientação a objetos de forma simples.” Cada sucesso real registra uso. Nunca salvar JWT ou respostas pessoais em logs compartilhados.
 
 Contrato REST Gemini consultado: [documentacao oficial generateContent](https://ai.google.dev/api/generate-content).
+
+Contingencia opcional para apresentacao: `TutorIA:FallbackApresentacao` (Render: `TutorIA__FallbackApresentacao`), padrao `false`. Se `true`, depois de tres falhas HTTP 503/429 o provider usa `TutorIaSimuladaProvider` existente e registra log explicito `FallbackApresentacao=True`, `FromProvider=Gemini`, `ToProvider=Simulado`. A resposta do Simulado se identifica como simulada. Nao aciona fallback por cancelamento, validacao, 400/401/403, timeout ou outros erros. Configuracao Gemini continua obrigatoria.
+
+Retries nao registram uso individualmente: sucesso final Gemini ou Simulado registra exatamente um `UsoIaAluno`; tres falhas sem fallback retornam a mensagem controlada e nao consomem quota. Nenhuma regra de plano ou contexto e alterada.

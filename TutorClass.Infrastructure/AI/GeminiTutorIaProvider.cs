@@ -19,6 +19,11 @@ public sealed class GeminiOptions
     public int TimeoutSeconds { get; set; } = 30;
 }
 
+public sealed class TutorIaContingenciaOptions
+{
+    public bool FallbackApresentacao { get; set; } = false;
+}
+
 public static class TutorIaRegistration
 {
     public static IServiceCollection AddTutorIaProvider(this IServiceCollection services, IConfiguration configuration)
@@ -35,6 +40,8 @@ public static class TutorIaRegistration
             options.TimeoutSeconds is < 1 or > 120 || options.MaxOutputTokens is < 1 or > 8192)
             throw new InvalidOperationException("Gemini exige ApiKey, Model e limites validos na configuracao.");
         services.AddSingleton(options);
+        services.AddSingleton(configuration.GetSection("TutorIA").Get<TutorIaContingenciaOptions>() ?? new());
+        services.AddScoped<TutorIaSimuladaProvider>();
         services.AddHttpClient<ITutorIaProvider, GeminiTutorIaProvider>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
@@ -44,15 +51,45 @@ public static class TutorIaRegistration
     }
 }
 
-public sealed class TutorIaProviderException(string categoria) : Exception("TutorIA indisponivel.")
+public sealed class TutorIaProviderException(string categoria, int? httpStatus = null) : Exception("TutorIA indisponivel.")
 {
     public string Categoria { get; } = categoria;
+    public int? HttpStatus { get; } = httpStatus;
 }
 
 public sealed class GeminiTutorIaProvider(HttpClient client, GeminiOptions options,
-    ILogger<GeminiTutorIaProvider> logger) : ITutorIaProvider
+    ILogger<GeminiTutorIaProvider> logger, TutorIaContingenciaOptions? contingencia = null,
+    TutorIaSimuladaProvider? simulado = null) : ITutorIaProvider
 {
     public async Task<string> ResponderAsync(TutorIaProviderRequest request, CancellationToken cancellationToken)
+    {
+        for (var tentativa = 1; ; tentativa++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                return await ResponderTentativaAsync(request, tentativa, cancellationToken);
+            }
+            catch (TutorIaProviderException ex) when (ex.HttpStatus is 503 or 429)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (tentativa < 3)
+                {
+                    logger.LogInformation("TutorIA Provider=Gemini RetryAfterSeconds={Delay} Attempt={Attempt} HttpStatus={HttpStatus}",
+                        tentativa, tentativa, ex.HttpStatus);
+                    await Task.Delay(TimeSpan.FromSeconds(tentativa), cancellationToken);
+                    continue;
+                }
+
+                if (contingencia?.FallbackApresentacao != true) throw;
+                logger.LogWarning("TutorIA FallbackApresentacao=True FromProvider=Gemini ToProvider=Simulado Attempts={Attempts} HttpStatus={HttpStatus}",
+                    tentativa, ex.HttpStatus);
+                return await (simulado ?? new TutorIaSimuladaProvider()).ResponderAsync(request, cancellationToken);
+            }
+        }
+    }
+
+    private async Task<string> ResponderTentativaAsync(TutorIaProviderRequest request, int tentativa, CancellationToken cancellationToken)
     {
         var timer = Stopwatch.StartNew();
         int? status = null;
@@ -111,7 +148,7 @@ public sealed class GeminiTutorIaProvider(HttpClient client, GeminiOptions optio
                 throw new TutorIaProviderException(status switch
                 {
                     401 or 403 => "autenticacao", 429 => "limite_provider", >= 500 => "servidor_provider", _ => "http"
-                });
+                }, status);
             }
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
             if (!json.RootElement.TryGetProperty("candidates", out var candidates) ||
@@ -141,8 +178,8 @@ public sealed class GeminiTutorIaProvider(HttpClient client, GeminiOptions optio
         catch (HttpRequestException) { categoria = "rede"; throw new TutorIaProviderException(categoria); }
         finally
         {
-            logger.LogInformation("TutorIA Provider={Provider} DurationMs={DurationMs} HttpStatus={HttpStatus} Success={Success} Category={Category} Model={Model} Endpoint={Endpoint} GoogleStatus={GoogleStatus} GoogleReason={GoogleReason}",
-                "Gemini", timer.ElapsedMilliseconds, status, categoria == "sucesso", categoria, options.Model, endpoint, googleStatus, googleReason);
+            logger.LogInformation("TutorIA Provider={Provider} DurationMs={DurationMs} HttpStatus={HttpStatus} Success={Success} Category={Category} Model={Model} Endpoint={Endpoint} GoogleStatus={GoogleStatus} GoogleReason={GoogleReason} Attempt={Attempt}",
+                "Gemini", timer.ElapsedMilliseconds, status, categoria == "sucesso", categoria, options.Model, endpoint, googleStatus, googleReason, tentativa);
         }
     }
 }

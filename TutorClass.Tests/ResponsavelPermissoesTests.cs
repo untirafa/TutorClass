@@ -316,6 +316,8 @@ public sealed class ResponsavelPermissoesTests
 
         var gravacao = await client.GetAsync($"/api/aulas/{Guid.NewGuid()}/gravacao");
         var tutoria = await client.GetAsync("/api/tutoria/status");
+        var chat = await client.PostAsJsonAsync("/api/tutoria/chat", new { mensagem = "Explique biologia" });
+        Assert.Equal(HttpStatusCode.Forbidden, chat.StatusCode);
 
         Assert.Equal(HttpStatusCode.Forbidden, gravacao.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, tutoria.StatusCode);

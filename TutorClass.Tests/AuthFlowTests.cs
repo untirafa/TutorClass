@@ -233,6 +233,7 @@ public sealed class TutorClassApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["TutorIA:Provider"] = "Simulado" }));
 
         builder.ConfigureTestServices(services =>
         {

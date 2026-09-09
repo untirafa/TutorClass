@@ -129,17 +129,28 @@ public sealed class AulaService
 
     public Task<IReadOnlyCollection<AulaResumoResponse>> ListarMinhasAsync(Guid usuarioId, bool administrador, CancellationToken cancellationToken)
     {
-        var query = _db.Aulas.AsEnumerable();
+        cancellationToken.ThrowIfCancellationRequested();
+        var alunos = _db.Usuarios.OfType<Aluno>();
+        var responsaveis = _db.Usuarios.OfType<Responsavel>();
+        var vinculos = _db.ResponsaveisAlunos;
+        var query = _db.Aulas;
         if (!administrador)
         {
-            query = query.Where(a => a.AlunoId == usuarioId || a.ProfessorId == usuarioId || _responsaveis.PossuiVinculo(usuarioId, a.AlunoId));
+            query = query.Where(a => a.AlunoId == usuarioId || a.ProfessorId == usuarioId ||
+                (responsaveis.Any(r => r.Id == usuarioId && r.Ativo) &&
+                 alunos.Any(aluno => aluno.Id == a.AlunoId && aluno.Ativo) &&
+                 vinculos.Any(v => v.ResponsavelId == usuarioId && v.AlunoId == a.AlunoId)));
         }
 
-        var aulas = query
-            .OrderBy(a => a.InicioUtc)
-            .Select(ToResumo)
-            .ToArray();
-
+        // Keep authorization and mapping in one query; no nested commands with an open reader.
+        var aulas = (from aula in query
+                     join aluno in alunos on aula.AlunoId equals aluno.Id
+                     join professor in _db.Professores on aula.ProfessorId equals professor.Id
+                     join materia in _db.Materias on aula.MateriaId equals materia.Id
+                     orderby aula.InicioUtc, aula.Id
+                     select new AulaResumoResponse(aula.Id, professor.Nome, aluno.Nome,
+                         aula.SolicitadaPorUsuarioId, materia.Nome, aula.InicioUtc,
+                         aula.DuracaoMinutos, aula.PrecoAcordado, aula.Status)).ToArray();
         return Task.FromResult<IReadOnlyCollection<AulaResumoResponse>>(aulas);
     }
 

@@ -60,6 +60,7 @@ builder.Services.AddSwaggerGen(options =>
 
 });
 builder.Services.AddApplication();
+TutorClass.Infrastructure.AI.TutorIaRegistration.AddTutorIaProvider(builder.Services, builder.Configuration);
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddInfrastructure(builder.Configuration);

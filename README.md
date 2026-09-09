@@ -940,7 +940,7 @@ POST /api/mentorias/acompanhamentos/{acompanhamentoId}/concluir
 
 ## TutorIA
 
-A TutorIA e o assistente educacional do TutorClass. Nesta etapa ela funciona com provider simulado (`TutorIaSimuladaProvider`) por tras da abstracao `ITutorIaProvider`, para permitir trocar por uma API externa futuramente sem reescrever controller ou regras de plano.
+A TutorIA e o assistente educacional do TutorClass. Utiliza a mesma abstracao `ITutorIaProvider`, com selecao entre `Simulado` e `Gemini`. O controller e as decisoes de autorizacao, plano e quota continuam exclusivamente no backend.
 
 Endpoints:
 
@@ -955,7 +955,7 @@ Regras:
 - `Foco`: ate 7 mensagens por dia; a 7a e permitida e a 8a tentativa e bloqueada sem chamar a TutorIA.
 - `Mentoria`: possui TutorIA sem limite diario imposto pelo plano; o uso ainda e registrado para historico/telemetria.
 
-O contador diario reaproveita `usos_ia_aluno` com chave unica por aluno/data. A data de "hoje" e calculada no fuso brasileiro de Sao Paulo. A mensagem so consome limite depois que a TutorIA simulada responde com sucesso.
+O contador diario reaproveita `usos_ia_aluno` com chave unica por aluno/data. A data de "hoje" e calculada no fuso brasileiro de Sao Paulo. A mensagem so consome limite depois que o provider responde com sucesso. Falhas externas nao consomem quota.
 
 Exemplo de chat:
 
@@ -1189,3 +1189,30 @@ GET /api/mentorias/{vinculoMentoriaId}/chat/mensagens
 ```
 
 O endpoint `POST /api/dev/test-data` permanece exclusivo de `Development`; em `Production`, retorna `404`.
+
+
+### Provider Gemini e contexto dinamico
+
+Configure `TutorIA:Provider=Simulado` para respostas locais de desenvolvimento/testes (padrao quando ausente). Para Gemini, configure via User Secrets ou ambiente:
+
+- `TutorIA__Provider=Gemini`
+- `Gemini__ApiKey`: chave privada, nunca versionar.
+- `Gemini__Model`: identificador do modelo habilitado na sua conta, sem prefixo `models/`.
+
+Essas mesmas tres variaveis devem ser cadastradas no painel Environment do Render. Se Gemini estiver selecionado, configuracao ausente/invalida impede a inicializacao; nao existe fallback para Simulado. Os testes HTTP fixam explicitamente Simulado.
+
+O `ContextoIaService` consulta PostgreSQL por aluno autenticado no JWT. Nome vem de `Usuarios/Aluno`; plano vem da assinatura ativa mais recente (sem assinatura = Gratuito); quota vem de `UsoIaAluno` na data de Sao Paulo. Materias sao distintas, ordenadas por nome, exclusivamente de aulas nao canceladas do aluno (maximo 5). Proximas aulas sao confirmadas e futuras, ordenadas por inicio UTC e ID (maximo 5). Mentores vem de vinculos ativos com professores ativos, ordenados por slot e ID (maximo 2). O vinculo nao define materia, portanto o campo do mentor fica nulo. As listas sao limitadas no banco antes de materializar. O contexto nao inclui historico de conversa nem assuntos estudados inferidos.
+
+Somente `mensagem` e recebida no request, obrigatoria e com ate 4.000 caracteres. Campos extras nao alimentam contexto ou autorizacao. Professor e Responsavel nao acessam TutorIA. Gemini recebe apenas nome, plano, quota, nomes de materias, horarios/professores das aulas autorizadas e nomes de mentores; nao recebe IDs internos, senha, JWT, documentos, dados financeiros detalhados, mensagens privadas, observacoes ou chat de Mentoria. Gemini nunca decide autorizacao ou quota.
+
+A instrucao central fica em `TutorIaPrompts`. A quota enviada corresponde ao instante anterior a resposta; sucesso incrementa o contador e a resposta HTTP contem a quota atualizada. Datas enviadas sao UTC e a instrucao pede apresentacao no fuso de Sao Paulo. Listas limitadas nao representam todo o historico.
+
+Timeout padrao: 30 segundos (`Gemini:TimeoutSeconds`, 1–120). Saida padrao: 1.024 tokens (`Gemini:MaxOutputTokens`, 1–8192). A chamada respeita CancellationToken; nao ha retries automaticos. Respostas HTTP 401/403, 429, 5xx, timeout, falha de rede, JSON inesperado, ausencia de candidates ou texto vazio retornam o contrato existente com `motivo=ERRO_TUTORIA` e mensagem: “A TutorIA está temporariamente indisponível. Tente novamente em alguns instantes.” O endpoint preserva HTTP 200 para esse contrato de erro de negocio.
+
+Logs Gemini contem apenas provider, duracao, status HTTP, sucesso e categoria. Logs automaticos do HttpClient desse provider estao desabilitados; chave fica no header, nunca na URL. Prompt, contexto, resposta e excecoes brutas nao sao registrados.
+
+A exclusao mutua por aluno existente permanece durante contexto, chamada e persistencia. Ela protege chamadas concorrentes dentro de uma instancia; nao e um lock distribuido para multiplas replicas. `UsoIaAluno` e sua chave unica permanecem. Nenhuma migration foi criada.
+
+Validacao automatizada: `dotnet test TutorClass.Tests`. Para validacao real, iniciar a API em Development com User Secrets configurados e `TutorIA__Provider=Gemini`, autenticar um aluno de desenvolvimento com acesso e enviar ao endpoint existente as perguntas: “Responda apenas: TutorIA funcionando.”, “Qual é o meu plano?”, “Quantas mensagens ainda tenho hoje?”, “Quando é minha próxima aula?”, “Quem são meus mentores?” e “Explique orientação a objetos de forma simples.” Cada sucesso real registra uso. Nunca salvar JWT ou respostas pessoais em logs compartilhados.
+
+Contrato REST Gemini consultado: [documentacao oficial generateContent](https://ai.google.dev/api/generate-content).

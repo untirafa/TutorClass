@@ -13,11 +13,13 @@ public sealed class TutorIaService
 
     private readonly IApplicationDbContext _db;
     private readonly ITutorIaProvider _provider;
+    private readonly IContextoIaService _contexto;
 
-    public TutorIaService(IApplicationDbContext db, ITutorIaProvider provider)
+    public TutorIaService(IApplicationDbContext db, ITutorIaProvider provider, IContextoIaService? contexto = null)
     {
         _db = db;
         _provider = provider;
+        _contexto = contexto ?? new ContextoIaService(db);
     }
 
     public Task<TutorIaStatusResponse> ObterStatusAsync(Guid alunoId, CancellationToken cancellationToken)
@@ -30,16 +32,6 @@ public sealed class TutorIaService
     {
         EnsureAlunoAtivo(alunoId);
 
-        if (string.IsNullOrWhiteSpace(request.Mensagem))
-        {
-            throw new DomainException("Mensagem para a TutorIA e obrigatoria.");
-        }
-
-        if (request.Mensagem.Length > 2000)
-        {
-            throw new DomainException("Mensagem para a TutorIA deve possuir no maximo 2000 caracteres.");
-        }
-
         var alunoLock = AlunoLocks.GetOrAdd(alunoId, _ => new SemaphoreSlim(1, 1));
         await alunoLock.WaitAsync(cancellationToken);
         try
@@ -50,13 +42,21 @@ public sealed class TutorIaService
                 return Bloqueado(statusAntes);
             }
 
+            if (string.IsNullOrWhiteSpace(request.Mensagem))
+                throw new DomainException("Mensagem para a TutorIA e obrigatoria.");
+            if (request.Mensagem.Length > 4000)
+                throw new DomainException("Mensagem para a TutorIA deve possuir no maximo 4000 caracteres.");
+
+            var contexto = await _contexto.ObterContextoAsync(alunoId, cancellationToken);
             string resposta;
             try
             {
                 resposta = await _provider.ResponderAsync(
-                    new TutorIaProviderRequest(alunoId, statusAntes.Plano, request.Mensagem.Trim(), GetHojeBrasil()),
+                    new TutorIaProviderRequest(alunoId, statusAntes.Plano, request.Mensagem.Trim(), GetHojeBrasil(), contexto),
                     cancellationToken);
+                if (string.IsNullOrWhiteSpace(resposta)) throw new InvalidOperationException("Resposta vazia.");
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch
             {
                 var statusAtual = BuildStatus(alunoId);
@@ -65,7 +65,7 @@ public sealed class TutorIaService
                     false,
                     statusAtual.Plano,
                     "ERRO_TUTORIA",
-                    "A TutorIA nao conseguiu responder agora. Tente novamente em alguns instantes.",
+                    "A TutorIA está temporariamente indisponível. Tente novamente em alguns instantes.",
                     null,
                     statusAtual.LimiteDiario,
                     statusAtual.UsadasHoje,

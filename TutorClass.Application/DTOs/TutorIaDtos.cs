@@ -34,4 +34,5 @@ public sealed record TutorIaProviderRequest(
     Guid AlunoId,
     PlanoAluno Plano,
     string Mensagem,
-    DateOnly DataReferencia);
+    DateOnly DataReferencia,
+    ContextoIaAluno? Contexto = null);

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>TutorClass.Mobile</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationTitle>TutorClass</ApplicationTitle>
+    <ApplicationId>com.tutorclass.mobile</ApplicationId>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
+    <AndroidPackageFormats>apk</AndroidPackageFormats>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+  </PropertyGroup>
+  <ItemGroup>
+    <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.svg" Color="#125C50" />
+    <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#125C50" BaseSize="128,128" />
+    <MauiFont Include="Resources/Fonts/*" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.20" />
+  </ItemGroup>
+</Project>
+

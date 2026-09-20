@@ -29,6 +29,7 @@ foreach(var name in new[]{"ChatMentoriaDocument","MensagemMentoriaDocument"}) {
         else if(p.PropertyType==typeof(DateTime))p.SetValue(obj,DateTime.SpecifyKind(new DateTime(2026,9,16),DateTimeKind.Utc));
     }
     var bson=obj.ToBsonDocument(type);
+    mongo.Add(new {name,fields=bson.Elements.Select(e=>new {name=e.Name,type=e.Value.BsonType.ToString(),subtype=e.Value.IsBsonBinaryData?e.Value.AsBsonBinaryData.SubType.ToString():null}).ToArray()});
 }
 var result=new {tables,mongo,pendingModelChanges=db.Database.HasPendingModelChanges(),migrations=db.Database.GetMigrations().ToArray()};
 File.WriteAllText("output/modelo_fisico/schema_verificado.json",JsonSerializer.Serialize(result,new JsonSerializerOptions {WriteIndented=true}));

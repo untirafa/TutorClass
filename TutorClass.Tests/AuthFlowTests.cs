@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -220,10 +221,12 @@ public sealed class TutorClassApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _databaseName = Guid.NewGuid().ToString();
     private readonly Action<IServiceCollection>? _configureTestServices;
+    private readonly string _environmentName;
 
-    public TutorClassApiFactory(Action<IServiceCollection>? configureTestServices = null)
+    public TutorClassApiFactory(Action<IServiceCollection>? configureTestServices = null, string environmentName = "Testing")
     {
         _configureTestServices = configureTestServices;
+        _environmentName = environmentName;
         Environment.SetEnvironmentVariable("Jwt__Issuer", "TutorClass.Tests");
         Environment.SetEnvironmentVariable("Jwt__Audience", "TutorClass.Tests");
         Environment.SetEnvironmentVariable("Jwt__Secret", "tests-only-secret-with-more-than-thirty-two-characters");
@@ -232,11 +235,16 @@ public sealed class TutorClassApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(_environmentName);
+        // Registro Npgsql válido, substituído pelo banco InMemory antes de qualquer consulta.
+        if (_environmentName != "Testing")
+            builder.UseSetting("ConnectionStrings:TutorClassDb", "Host=127.0.0.1;Database=unused;Username=unused");
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["TutorIA:Provider"] = "Simulado" }));
 
         builder.ConfigureTestServices(services =>
         {
+            services.AddDataProtection().UseEphemeralDataProtectionProvider();
+            services.RemoveAll<Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<TutorClassDbContext>>();
             services.RemoveAll<DbContextOptions<TutorClassDbContext>>();
             services.RemoveAll<DbContextOptions>();
             services.RemoveAll<IDatabaseProvider>();

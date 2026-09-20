@@ -8,7 +8,9 @@ const store = {
   get(key) { try { return localStorage.getItem(key); } catch { return null; } },
   set(key, value) { try { localStorage.setItem(key, value); } catch { /* Navegação privada */ } }
 };
-const state = { base: store.get('tutorclass.api') || (location.port==='5242'?location.origin:'http://localhost:5242'), user:null, token:null, epoch:0, subjects:[], teachers:[], publicLoaded:false, chatTimer:null, tutorHistory:[] };
+// Overrides antigos em localStorage não podem redirecionar o site para outro banco.
+// Uma troca manual é válida somente até recarregar a página.
+const state = { base: window.TUTORCLASS_CONFIG?.apiBaseUrl || '', user:null, token:null, epoch:0, subjects:[], teachers:[], publicLoaded:false, chatTimer:null, tutorHistory:[] };
 const student = () => state.user?.perfil === 'Aluno';
 const teacher = () => state.user?.perfil === 'Professor';
 const administrator = () => state.user?.perfil === 'Administrador';
@@ -41,21 +43,12 @@ function resetSession(){stopChat();state.epoch++;state.user=null;state.token=nul
 // Autenticação explícita por requisição: nenhum JWT é enviado aos endpoints públicos.
 async function api(path,{method='GET',body,auth=true}={}){
   if(auth&&!state.token)throw new Error('Entre na sua conta para continuar.');
-  const epoch=state.epoch,controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),path==='/api/tutoria/chat'?125000:20000);
-  const headers={Accept:'application/json'};
-  if(auth)headers.Authorization=`Bearer ${state.token}`;
-  if(body!==undefined)headers['Content-Type']='application/json';
+  const epoch=state.epoch;
   try{
-    const response=await fetch(state.base+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal});
-    const raw=await response.text();
+    const data=await TutorClassHttp.request(state.base,path,{method,body,token:auth?state.token:undefined,timeout:path==='/api/tutoria/chat'?125000:60000});
     if(epoch!==state.epoch)throw new DOMException('Sessão alterada.','AbortError');
-    if(response.status===401&&auth){resetSession();location.hash='login';notice('Sua sessão expirou. Entre novamente.',true);throw new DOMException('Sessão expirada.','AbortError');}
-    let data=null;
-    try{data=raw?JSON.parse(raw):null;}catch{throw new Error('Resposta inesperada. Confira o endereço da API em Configurar conexão.');}
-    if(!response.ok){const message=data?.error || (data?.errors&&Object.values(data.errors).flat().join(' ')) || data?.title || ({403:'Seu perfil não tem permissão para esta ação.',404:'Registro não encontrado.',503:'Serviço temporariamente indisponível.'}[response.status]) || `Não foi possível concluir (HTTP ${response.status}).`;const err=new Error(message);err.status=response.status;throw err;}
     return data;
-  }catch(e){if(epoch!==state.epoch)throw new DOMException('Sessão alterada.','AbortError');if(controller.signal.aborted)throw new Error('O servidor demorou para responder. Consulte o resultado antes de repetir uma alteração.');if(e instanceof TypeError)throw new Error('Não foi possível conectar à plataforma. Verifique se a API está ativa e se o endereço e o CORS estão configurados.');throw e;}finally{clearTimeout(timer);}
+  }catch(e){if(epoch!==state.epoch)throw new DOMException('Sessão alterada.','AbortError');if(e.status===401&&auth){resetSession();location.hash='login';notice(e.message,true);throw new DOMException('Sessão expirada.','AbortError');}throw e;}
 }
 const get=path=>api(path);
 const publicGet=path=>api(path,{auth:false});
@@ -125,7 +118,7 @@ function renderAuth(){
   if(registering&&$('auth-role').value==='Administrador')$('auth-role').value='Aluno';
   const professor=$('auth-role').value==='Professor';
   $('auth-title').textContent=registering?'Crie sua conta':'Entre na sua conta';
-  $('auth-description').textContent=registering?'Seu próximo passo começa aqui.':'Escolha o perfil da sua conta para continuar.';
+  $('auth-description').textContent=registering?'Seu próximo passo começa aqui.':'Entre com seu e-mail e senha. Seu perfil será identificado pela API.';
   $('login-tab').classList.toggle('active',!registering);$('register-tab').classList.toggle('active',registering);
   $('register-fields').hidden=!registering;$('student-fields').hidden=!registering||professor;$('teacher-fields').hidden=!registering||!professor;
   const f=$('auth-form');f.elements.nome.required=registering;f.elements.biografia.required=registering&&professor;f.elements.precoHora.required=registering&&professor;
@@ -137,8 +130,11 @@ $('auth-form').addEventListener('submit',e=>{e.preventDefault();run($('auth-subm
   const v=Object.fromEntries(new FormData($('auth-form'))),registering=authMode()==='register';
   if(registering){const body={nome:v.nome.trim(),email:v.email.trim(),senha:v.senha};if(v.perfil==='Professor'){body.biografia=v.biografia.trim();body.precoHora=Number(v.precoHora);}else body.dataNascimento=v.dataNascimento||null;await api(`/api/auth/registrar/${v.perfil.toLowerCase()}`,{method:'POST',auth:false,body});$('auth-form').elements.senha.value='';location.hash='login';notice('Conta criada. Entre com seu e-mail e senha.');return;}
   const login=await api('/api/auth/login',{method:'POST',auth:false,body:{email:v.email.trim(),senha:v.senha}});
-  if(login.usuario.perfil!==v.perfil)throw new Error(`Esta conta pertence ao perfil ${login.usuario.perfil}. Selecione o perfil correspondente para entrar.`);
-  resetSession();state.token=login.accessToken;state.user=login.usuario;notice('Bem-vindo à sua área.');location.hash='app/inicio';
+  if(typeof login?.accessToken!=='string'||!login.accessToken.trim())throw new Error('A API não retornou um token de acesso válido.');
+  resetSession();state.token=login.accessToken;
+  try{const user=await get('/api/auth/me');if(!user?.id||!user.nome||!user.perfil)throw new Error('A API não retornou os dados da conta autenticada.');state.user=user;$('auth-role').value=user.perfil;}
+  catch(error){resetSession();throw error;}
+  notice('Bem-vindo à sua área.');location.hash='app/inicio';
 },$('auth-feedback'));});
 const menus=[['inicio','Visão geral'],['professores','Encontrar professores','Aluno'],['alunos','Meus alunos','Professor'],['aulas','Minhas aulas','Aluno|Professor'],['materiais','Materiais e atividades','Aluno|Professor'],['mentoria','Mentoria e chat','Aluno|Professor'],['acompanhamentos','Acompanhamentos','Aluno|Professor'],['tutoria','TutorIA','Aluno'],['planos','Planos','Aluno'],['gravacoes','Gravações','Aluno'],['financeiro','Financeiro','Aluno|Professor'],['notificacoes','Notificações'],['profissional','Perfil profissional','Professor'],['disponibilidade','Disponibilidade','Professor'],['analise','Análise de professores','Administrador'],['conta','Minha conta'],['ajuda','Ajuda']];
 function route(){stopChat();const hash=location.hash.slice(1)||'home';const auth=['login','cadastro-aluno','cadastro-professor'].includes(hash),app=hash.startsWith('app/');if(app&&!state.user){location.hash='login';return;}
@@ -257,10 +253,10 @@ views.profissional=async host=>{host.replaceChildren();const intro=el('div',null
 };
 views.conta=async host=>{const user=await get('/api/auth/me');host.replaceChildren();const panel=el('div',null,'panel');panel.append(details({'Nome':user.nome,'E-mail':user.email,'Perfil':user.perfil}),text('Sua sessão é mantida somente nesta página. Ao recarregar ou sair, entre novamente.'));host.append(panel,button('Configurar conexão com a plataforma',connectionDialog));};
 views.ajuda=async host=>{host.replaceChildren();const fields=[optional('termo','Pesquisar dúvidas','text'),optional('categoria','Categoria (opcional)','text')],form=formFields(fields);form.className='toolbar';const b=el('button','Pesquisar');b.type='submit';form.append(b);const results=el('div',null,'stack');host.append(form,results);const search=async()=>{const v=formValues(form,fields),q=new URLSearchParams();if(v.termo)q.set('termo',v.termo);if(v.categoria)q.set('categoria',v.categoria);const items=await publicGet('/api/faq?'+q);list(results,items,faqItem,'Nenhuma pergunta encontrada.');};submit(form,search);await search();const chat=formFields([field('mensagem','Pergunte sobre a plataforma','textarea')]);const send=el('button','Consultar assistente de ajuda');send.type='submit';const answer=el('p',null,'inline-message');answer.hidden=true;chat.append(send,answer);submit(chat,async v=>{const response=await api('/api/faq/chat',{method:'POST',auth:false,body:v});answer.hidden=false;answer.textContent=response.resposta||response.mensagem||'Não encontrei uma resposta para esta pergunta.';});host.append(el('h3','Assistente de ajuda'),chat);};
-function connectionDialog(){const content=modal('Conexão com a plataforma');append(content,text('Em desenvolvimento, use a API na porta 5242 e sirva esta pasta na porta 5173. Alterar a conexão encerra a sessão atual.'),text('1. Inicie a API com as configurações existentes de banco e JWT.'),el('code','dotnet run --project TutorClass.API --launch-profile http'),text('2. Em outro terminal, na pasta do projeto:'),el('code','python -m http.server 5173 --bind 127.0.0.1'),link('Abrir front-end local ↗','http://127.0.0.1:5173'),text('O CORS padrão em Development permite localhost e 127.0.0.1 na porta 5173. Em produção, a origem do front-end deve estar entre as origens permitidas da API.'));
-  const fields=[field('base','Endereço da API','url')],form=formFields(fields,{base:state.base});const save=el('button','Salvar e testar conexão');save.type='submit';form.append(save);submit(form,async v=>{const url=new URL(v.base);if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.hash||url.search)throw new Error('Use uma URL HTTP/HTTPS, sem credenciais, consulta ou fragmentos.');resetSession();state.base=url.href.replace(/\/+$/,'');store.set('tutorclass.api',state.base);state.subjects=[];state.teachers=[];state.publicLoaded=false;location.hash='home';route();try{const health=await publicGet('/health');notice(health.status==='Healthy'?'Conexão estabelecida.':`API acessível com situação ${health.status}.`,health.status!=='Healthy');}catch(e){notice(e.message,true);}});content.append(form);
+function connectionDialog(){const content=modal('Conexão com a plataforma');append(content,text(`API configurada para este site: ${window.TUTORCLASS_CONFIG?.apiBaseUrl || 'não configurada'}`),text('A alteração abaixo vale até recarregar a página e encerra a sessão. Contas de servidores diferentes podem pertencer a bancos diferentes.'));
+  const fields=[field('base','Endereço da API','url')],form=formFields(fields,{base:state.base});const save=el('button','Usar e testar conexão');save.type='submit';form.append(save);submit(form,async v=>{const base=TutorClassHttp.normalizeBaseUrl(v.base);const health=await TutorClassHttp.request(base,'/health',{timeout:60000});if(health?.service!=='TutorClass.API')throw new Error('O endereço não respondeu como a API TutorClass.');resetSession();state.base=base;state.subjects=[];state.teachers=[];state.publicLoaded=false;location.hash='home';route();notice(health.status==='Healthy'?'Conexão estabelecida.':`API acessível com situação ${health.status}.`,health.status!=='Healthy');});content.append(form);
 }
 $('connection-button').addEventListener('click',connectionDialog);
 planCards($('landing-plans'));
 route();
-if(location.protocol==='file:')notice('Abra esta página pelo servidor local na porta 5173 para conectar à API. Veja Configurar conexão no rodapé.',true);
+if(location.protocol==='file:')notice('Abra o site por http://localhost:5242. Arquivos abertos diretamente não possuem uma origem HTTP permitida pela API.',true);

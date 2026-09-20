@@ -4,7 +4,19 @@ TutorClass e uma Web API em ASP.NET Core para uma plataforma marketplace que con
 
 A API implementa o nucleo do dominio: usuarios, perfis principais, materias, candidatura de professores, qualificacoes, disponibilidade, aulas/agendamentos, acompanhamento do aluno, avaliacoes, reputacao, persistencia PostgreSQL/Neon e endpoints REST.
 
-## Iniciar o site e testar cadastro/login localmente
+## Site público e API na mesma origem
+
+Depois do deploy, **https://tutorclass.onrender.com/** abre o frontend público.
+A mesma aplicação ASP.NET Core atende `/api/...`, `/swagger` e `/health`.
+
+Os arquivos públicos estão em `TutorClass.API/wwwroot` e entram automaticamente no `dotnet publish` e na imagem Docker. `config.js` usa `window.location.origin`: em produção chama a API do próprio Render; localmente chama a API local. O frontend usa rotas por fragmento (`/#login`, `/#app/inicio`), sem fallback que transforme erros da API em HTML.
+
+Não é necessário configurar CORS para o site público na mesma origem. CORS adicional é habilitado somente em Development. Remova do painel do Render as antigas variáveis `Cors__AllowedOrigins__*` usadas para testes locais; mesmo presentes, são ignoradas em Production.
+
+Veja [publicação, diff e validação](docs/Frontend-publicacao.md).
+Cadastro, login, JWT Bearer, confirmação em `/api/auth/me` e mensagens reais da API permanecem preservados.
+
+## Executar site e API em desenvolvimento
 
 Na pasta raiz `TutorClass`, execute e mantenha o terminal aberto:
 
@@ -20,7 +32,7 @@ Em **Development**, quando `ConnectionStrings:TutorClassDb` estiver vazia, a API
 
 Se `Jwt:Secret` nao estiver configurado em Development, uma chave aleatoria e criada e reutilizada em `.local/jwt-secret.key`. A pasta `.local` e ignorada pelo Git. Uma connection string ou chave JWT configurada explicitamente continua tendo prioridade. Em producao, PostgreSQL e segredo JWT continuam obrigatorios; nao existe fallback automatico. O schema SQLite usa `EnsureCreated`: alteracoes futuras nas entidades exigem uma estrategia de atualizacao do banco local; nao aplique as migrations PostgreSQL nele ([documentacao EF Core](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/providers)).
 
-O mesmo servidor entrega somente `index.html`, `style.css` e `app.js` na raiz do projeto, em Development. Voce pode editar esses arquivos e atualizar o navegador sem manter um segundo servidor de arquivos. Caso tenha configurado outra URL no site, use **Configurar conexao** e informe `http://localhost:5242`.
+O servidor entrega os arquivos de `TutorClass.API/wwwroot` em Development e Production. Reinicie a API apos atualizar o codigo. O site local chama a API local; suas contas podem estar no banco SQLite de desenvolvimento, separado do Neon.
 
 Para verificar:
 
@@ -597,22 +609,9 @@ O seed da migration inclui somente:
 
 ## CORS
 
-Em `Development`, a API permite por padrao frontends locais em:
-
-```text
-http://localhost:3000
-http://localhost:5173
-http://127.0.0.1:3000
-http://127.0.0.1:5173
-```
-
-Para ambientes publicados, configure explicitamente:
-
-```powershell
-dotnet user-secrets set "Cors:AllowedOrigins:0" "https://seu-frontend.example.com" --project TutorClass.API
-```
-
-Ou use variavel de ambiente equivalente, sem colocar secrets no codigo.
+O site e a API compartilham a origem. Em Production não há necessidade de liberar origens externas.
+A política só usa `Cors:AllowedOrigins` em Development, com origens locais explícitas em `appsettings.Development.json` (localhost/127.0.0.1 nas portas 5242, 3000 e 5173).
+Para um frontend separado durante desenvolvimento, ajuste essa lista à origem real, sem wildcard.
 
 ## Configuracao Neon/PostgreSQL
 
@@ -1179,7 +1178,6 @@ Jwt__Audience=TutorClass.Client
 Jwt__ExpirationMinutes=120
 MongoDb__ConnectionString=<connection string do MongoDB Atlas>
 MongoDb__DatabaseName=<nome do database MongoDB>
-Cors__AllowedOrigins__0=<URL publica do frontend quando existir>
 ```
 
 Nao coloque connection strings, senhas ou secrets em arquivos versionados. Use variaveis de ambiente no Render e User Secrets em desenvolvimento.
@@ -1202,11 +1200,7 @@ Swagger para demonstracao:
 
 No ambiente publicado deste projeto academico, o Swagger fica habilitado quando `Swagger__Enabled=true`. Nao ha exposicao de secrets no Swagger.
 
-CORS:
-
-- em `Development`, a API permite frontends locais comuns;
-- em `Production`, cadastre a origem publica do frontend em `Cors__AllowedOrigins__0`;
-- para multiplas origens, use `Cors__AllowedOrigins__1`, `Cors__AllowedOrigins__2` e assim por diante.
+Frontend e API sao publicados na mesma origem. Nao configure CORS local no Render; a politica de origens adicionais e restrita a Development.
 
 MongoDB Atlas:
 

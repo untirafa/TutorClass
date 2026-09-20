@@ -34,17 +34,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("TutorClassFrontend", policy =>
     {
-        var origins = configuredCorsOrigins.Length > 0
-            ? configuredCorsOrigins
-            : builder.Environment.IsDevelopment()
-                ?
-                [
-                    "http://localhost:3000",
-                    "http://localhost:5173",
-                    "http://127.0.0.1:3000",
-                    "http://127.0.0.1:5173"
-                ]
-                : [];
+        // O site publicado usa a mesma origem; CORS adicional é só de desenvolvimento.
+        var origins = builder.Environment.IsDevelopment() ? configuredCorsOrigins : [];
 
         policy.WithOrigins(origins)
             .AllowAnyHeader()
@@ -150,28 +141,14 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+// Somente wwwroot é público. Rotas do frontend usam # e não precisam de fallback.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseCors("TutorClassFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
-if (app.Environment.IsDevelopment())
-{
-    // Serve only these public files, never the repository, configuration or local database.
-    var frontendDirectory = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, ".."));
-    foreach (var (route, file, contentType) in new[]
-    {
-        ("/", "index.html", "text/html; charset=utf-8"),
-        ("/index.html", "index.html", "text/html; charset=utf-8"),
-        ("/style.css", "style.css", "text/css; charset=utf-8"),
-        ("/app.js", "app.js", "text/javascript; charset=utf-8")
-    })
-    {
-        var path = Path.Combine(frontendDirectory, file);
-        app.MapGet(route, () => File.Exists(path)
-            ? Results.File(path, contentType)
-            : Results.NotFound()).ExcludeFromDescription();
-    }
-}
 app.MapGet("/health", async (IApplicationDbContext db, IMentoriaChatStore chatStore, CancellationToken cancellationToken) =>
 {
     var databaseHealthy = true;

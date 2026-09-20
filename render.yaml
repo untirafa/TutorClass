@@ -23,5 +23,3 @@ services:
         sync: false
       - key: MongoDb__DatabaseName
         sync: false
-      - key: Cors__AllowedOrigins__0
-        sync: false

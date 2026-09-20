@@ -1,5 +1,9 @@
 namespace TutorClass.Application.DTOs;
 
+public sealed record AulaMaterialOpcao(Guid Id, DateTime Inicio, string Status);
+public sealed record DestinatarioMaterialResponse(Guid AlunoId, string AlunoNome, Guid MateriaId, string MateriaNome,
+    bool MentoriaAtiva, IReadOnlyCollection<AulaMaterialOpcao> Aulas);
+
 public sealed record CriarMaterialRequest(
     Guid AlunoId,
     Guid? AulaId,

@@ -27,6 +27,7 @@ coverage/
 appsettings.Local.json
 appsettings.*.Local.json
 secrets.json
+.local/
 *.pfx
 *.p12
 *.pem

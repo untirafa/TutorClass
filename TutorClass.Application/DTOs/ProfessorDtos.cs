@@ -34,3 +34,18 @@ public sealed record ProfessorDetalhesDto(
 
 public sealed record CriarProfessorRequest(string Nome, string Email, string Senha, string Biografia, decimal PrecoHora);
 public sealed record VincularMateriaProfessorRequest(Guid MateriaId);
+
+public sealed record AtualizarPerfilProfessorRequest(string Biografia, decimal PrecoHora);
+
+public sealed record ProfessorPerfilPrivadoDto(
+    Guid Id,
+    string Nome,
+    string Email,
+    StatusProfessor Status,
+    string? Biografia,
+    decimal? PrecoHora,
+    bool OfereceMentoria,
+    int LimiteMentorados,
+    IReadOnlyCollection<MateriaDto> Materias,
+    IReadOnlyCollection<QualificacaoProfessorDto> Qualificacoes,
+    IReadOnlyCollection<DisponibilidadeProfessorDto> Disponibilidades);

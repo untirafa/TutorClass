@@ -4,6 +4,45 @@ TutorClass e uma Web API em ASP.NET Core para uma plataforma marketplace que con
 
 A API implementa o nucleo do dominio: usuarios, perfis principais, materias, candidatura de professores, qualificacoes, disponibilidade, aulas/agendamentos, acompanhamento do aluno, avaliacoes, reputacao, persistencia PostgreSQL/Neon e endpoints REST.
 
+## Iniciar o site e testar cadastro/login localmente
+
+Na pasta raiz `TutorClass`, execute e mantenha o terminal aberto:
+
+```powershell
+dotnet run --project TutorClass.API --launch-profile http
+```
+
+- Site: http://localhost:5242
+- Swagger: http://localhost:5242/swagger
+- Estado da API e do banco: http://localhost:5242/health
+
+Em **Development**, quando `ConnectionStrings:TutorClassDb` estiver vazia, a API cria automaticamente um banco SQLite persistente em `TutorClass.API/.local/tutorclass.db`, com as tabelas e materias iniciais. Nao precisa instalar PostgreSQL nem executar migrations para esse modo. As contas continuam existindo depois de reiniciar. O banco local e separado do Neon; dados nao sao transferidos automaticamente entre eles. Nao apague `.local` se quiser manter suas contas.
+
+Se `Jwt:Secret` nao estiver configurado em Development, uma chave aleatoria e criada e reutilizada em `.local/jwt-secret.key`. A pasta `.local` e ignorada pelo Git. Uma connection string ou chave JWT configurada explicitamente continua tendo prioridade. Em producao, PostgreSQL e segredo JWT continuam obrigatorios; nao existe fallback automatico. O schema SQLite usa `EnsureCreated`: alteracoes futuras nas entidades exigem uma estrategia de atualizacao do banco local; nao aplique as migrations PostgreSQL nele ([documentacao EF Core](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/providers)).
+
+O mesmo servidor entrega somente `index.html`, `style.css` e `app.js` na raiz do projeto, em Development. Voce pode editar esses arquivos e atualizar o navegador sem manter um segundo servidor de arquivos. Caso tenha configurado outra URL no site, use **Configurar conexao** e informe `http://localhost:5242`.
+
+Para verificar:
+
+1. Abra `/health`: espere `status: Healthy` e `database.status: Healthy`. No modo local, `database.provider: SQLite`, `postgresql: NotConfigured` e `mongodb: NotConfigured` sao esperados. O chat com MongoDB continua exigindo configuracao propria.
+2. No site, crie uma conta de aluno ou professor, com senha de pelo menos 8 caracteres. Para professor, informe preco por hora maior que zero. Saia e entre novamente com os mesmos dados.
+3. No Swagger, abra `POST /api/auth/registrar/aluno`, clique em **Try it out** e envie um email ainda nao utilizado:
+
+```json
+{
+  "nome": "Aluno de teste",
+  "email": "aluno.teste@example.com",
+  "senha": "SenhaDeTeste@2026",
+  "dataNascimento": null
+}
+```
+
+4. O cadastro retorna **201**. Execute `POST /api/auth/login` com o mesmo email e senha: deve retornar **200** e `accessToken`.
+5. Em **Authorize**, cole somente o valor de `accessToken`, sem aspas nem `Bearer`. Execute `GET /api/auth/me`: deve retornar **200** com seu usuario. Cadastro/login sao publicos e nao exigem token.
+6. Email repetido ou senha incorreta retornam **400** com mensagem explicativa. `/me` sem token retorna **401**. Professor recem-cadastrado ja pode entrar, mas so aparece no catalogo publico apos aprovacao.
+
+Validacao automatizada: `dotnet test TutorClass.Tests`. Para usar Neon/PostgreSQL, siga a configuracao e as migrations abaixo; essas etapas sao opcionais para editar o HTML/CSS localmente.
+
 ## Arquitetura
 
 ```text
@@ -621,9 +660,9 @@ Swagger: http://localhost:5242/swagger
 OpenAPI: http://localhost:5242/swagger/v1/swagger.json
 ```
 
-A API nao abre conexao com o banco durante a inicializacao. Endpoints que consultam dados dependem da connection string e do banco migrado.
+No modo local SQLite, a API prepara o banco durante a inicializacao. Com PostgreSQL configurado, os endpoints dependem da connection string e das migrations aplicadas manualmente.
 
-Depois da autenticacao JWT, configure tambem o segredo JWT antes de iniciar:
+Para configurar um segredo JWT proprio (obrigatorio fora de Development):
 
 ```powershell
 dotnet user-secrets set "Jwt:Secret" "<SUA_CHAVE_JWT_FORTE>" --project TutorClass.API

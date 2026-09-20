@@ -64,6 +64,46 @@ public sealed class ProfessorService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    public Task<ProfessorPerfilPrivadoDto> BuscarMeuPerfilAsync(Guid professorId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var professor = _db.Professores.SingleOrDefault(p => p.Id == professorId && p.Ativo)
+            ?? throw new DomainException("Professor nao encontrado ou inativo.");
+
+        var materias = (from vinculo in _db.ProfessoresMaterias
+                        join materia in _db.Materias on vinculo.MateriaId equals materia.Id
+                        where vinculo.ProfessorId == professorId
+                        orderby materia.Nome
+                        select new MateriaDto(materia.Id, materia.Nome)).ToArray();
+        var qualificacoes = _db.QualificacoesProfessor
+            .Where(q => q.ProfessorId == professorId)
+            .OrderBy(q => q.Titulo)
+            .Select(q => new QualificacaoProfessorDto(q.Id, q.ProfessorId, q.Tipo, q.Titulo,
+                q.Instituicao, q.Descricao, q.DataConclusao, q.DocumentoComprovacao,
+                q.StatusVerificacao, q.DataVerificacaoUtc))
+            .ToArray();
+
+        return Task.FromResult(new ProfessorPerfilPrivadoDto(
+            professor.Id, professor.Nome, professor.Email, professor.Status,
+            professor.Biografia, professor.PrecoHora, professor.OfereceMentoria,
+            professor.LimiteMentorados, materias, qualificacoes,
+            GetDisponibilidadesProfessor(professorId)));
+    }
+
+    public async Task<ProfessorPerfilPrivadoDto> AtualizarMeuPerfilAsync(Guid professorId, AtualizarPerfilProfessorRequest request, CancellationToken cancellationToken)
+    {
+        var professor = _db.Professores.SingleOrDefault(p => p.Id == professorId && p.Ativo)
+            ?? throw new DomainException("Professor nao encontrado ou inativo.");
+        if (request.Biografia?.Length > 2000)
+        {
+            throw new DomainException("Biografia profissional deve ter no maximo 2000 caracteres.");
+        }
+
+        professor.AtualizarPerfilProfissional(request.Biografia!, request.PrecoHora);
+        await _db.SaveChangesAsync(cancellationToken);
+        return await BuscarMeuPerfilAsync(professorId, cancellationToken);
+    }
+
     public Task<IReadOnlyCollection<ProfessorResumoDto>> ListarAprovadosAsync(Guid? materiaId, CancellationToken cancellationToken)
     {
         var query = _db.Professores

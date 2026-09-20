@@ -17,6 +17,22 @@ public sealed class CandidaturasProfessorController : ControllerBase
         _service = service;
     }
 
+    [HttpGet("professores/me/candidaturas")]
+    [Authorize(Policy = "Professor")]
+    [ProducesResponseType(typeof(IReadOnlyCollection<CandidaturaProfessorDto>), StatusCodes.Status200OK)]
+    public Task<IReadOnlyCollection<CandidaturaProfessorDto>> Minhas(CancellationToken cancellationToken)
+    {
+        return _service.ListarMinhasAsync(User.GetUserId(), cancellationToken);
+    }
+
+    [HttpGet("admin/candidaturas-professor")]
+    [Authorize(Policy = "Administrador")]
+    [ProducesResponseType(typeof(IReadOnlyCollection<CandidaturaProfessorAdminDto>), StatusCodes.Status200OK)]
+    public Task<IReadOnlyCollection<CandidaturaProfessorAdminDto>> ListarParaAdministracao(CancellationToken cancellationToken)
+    {
+        return _service.ListarParaAdministracaoAsync(User.GetUserId(), cancellationToken);
+    }
+
     [HttpPost("professores/{professorId:guid}/candidaturas")]
     [Authorize(Policy = "Professor")]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]

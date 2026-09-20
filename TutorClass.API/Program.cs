@@ -1,16 +1,21 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using TutorClass.API.Hubs;
+using TutorClass.API.Configuration;
 using TutorClass.API.Middleware;
 using TutorClass.API.Security;
 using TutorClass.Application.Abstractions;
 using TutorClass.Application;
 using TutorClass.Infrastructure;
+using TutorClass.Infrastructure.Persistence;
+using TutorClass.Infrastructure.Chat;
 
 var builder = WebApplication.CreateBuilder(args);
+var useLocalDatabase = LocalDevelopment.Configure(builder.Configuration, builder.Environment);
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -61,13 +66,13 @@ builder.Services.AddSwaggerGen(options =>
     {
         [new OpenApiSecuritySchemeReference("Bearer", document)] = []
     });
-
+    options.OperationFilter<SwaggerAuthorizationOperationFilter>();
 });
 builder.Services.AddApplication();
 TutorClass.Infrastructure.AI.TutorIaRegistration.AddTutorIaProvider(builder.Services, builder.Configuration);
 if (!builder.Environment.IsEnvironment("Testing"))
 {
-    builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddInfrastructure(builder.Configuration, useLocalDatabase);
 }
 builder.Services.AddScoped<TutorClass.Application.Abstractions.IJwtTokenService, JwtTokenService>();
 
@@ -75,6 +80,10 @@ var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<Jw
 if (string.IsNullOrWhiteSpace(jwtOptions.Secret))
 {
     throw new InvalidOperationException("Jwt:Secret deve ser configurado por User Secrets ou variavel de ambiente.");
+}
+if (Encoding.UTF8.GetByteCount(jwtOptions.Secret) < 32)
+{
+    throw new InvalidOperationException("Jwt:Secret deve ter pelo menos 32 bytes para assinar tokens HS256.");
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -117,6 +126,14 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+if (useLocalDatabase)
+{
+    using var scope = app.Services.CreateScope();
+    var database = scope.ServiceProvider.GetRequiredService<TutorClassDbContext>();
+    // PostgreSQL migrations remain exclusive to PostgreSQL. This is a separate local database.
+    await database.Database.EnsureCreatedAsync();
+    app.Logger.LogInformation("Desenvolvimento: banco SQLite local em .local/tutorclass.db. As contas persistem ao reiniciar a API.");
+}
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
@@ -136,29 +153,50 @@ if (!app.Environment.IsDevelopment())
 app.UseCors("TutorClassFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
+
+if (app.Environment.IsDevelopment())
+{
+    // Serve only these public files, never the repository, configuration or local database.
+    var frontendDirectory = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, ".."));
+    foreach (var (route, file, contentType) in new[]
+    {
+        ("/", "index.html", "text/html; charset=utf-8"),
+        ("/index.html", "index.html", "text/html; charset=utf-8"),
+        ("/style.css", "style.css", "text/css; charset=utf-8"),
+        ("/app.js", "app.js", "text/javascript; charset=utf-8")
+    })
+    {
+        var path = Path.Combine(frontendDirectory, file);
+        app.MapGet(route, () => File.Exists(path)
+            ? Results.File(path, contentType)
+            : Results.NotFound()).ExcludeFromDescription();
+    }
+}
 app.MapGet("/health", async (IApplicationDbContext db, IMentoriaChatStore chatStore, CancellationToken cancellationToken) =>
 {
-    var postgresHealthy = true;
+    var databaseHealthy = true;
     try
     {
         _ = db.Materias.Take(1).ToArray();
     }
     catch
     {
-        postgresHealthy = false;
+        databaseHealthy = false;
     }
 
-    var mongoStatus = chatStore.Configurado
+    var chatStatus = chatStore.Configurado
         ? await chatStore.IsHealthyAsync(cancellationToken) ? "Healthy" : "Unhealthy"
         : "NotConfigured";
 
     return Results.Ok(new
     {
-        status = postgresHealthy && mongoStatus is "Healthy" or "NotConfigured" ? "Healthy" : "Degraded",
+        status = databaseHealthy && chatStatus is "Healthy" or "NotConfigured" ? "Healthy" : "Degraded",
         service = "TutorClass.API",
         timestampUtc = DateTime.UtcNow,
-        postgresql = postgresHealthy ? "Healthy" : "Unhealthy",
-        mongodb = mongoStatus
+        database = new { provider = useLocalDatabase ? "SQLite" : "PostgreSQL", status = databaseHealthy ? "Healthy" : "Unhealthy" },
+        postgresql = useLocalDatabase ? "NotConfigured" : databaseHealthy ? "Healthy" : "Unhealthy",
+        chat = new { provider = chatStore is SqliteMentoriaChatStore ? "SQLite" : chatStore is MongoMentoriaChatStore ? "MongoDB" : "NotConfigured", status = chatStatus },
+        mongodb = chatStore is MongoMentoriaChatStore ? chatStatus : "NotConfigured"
     });
 })
 .WithName("HealthCheck")

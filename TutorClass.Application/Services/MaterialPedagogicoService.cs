@@ -5,6 +5,8 @@ using TutorClass.Domain.Lessons;
 using TutorClass.Domain.Materials;
 using TutorClass.Domain.Notifications;
 using TutorClass.Domain.Users;
+using TutorClass.Domain.Plans;
+using TutorClass.Domain.Teachers;
 
 namespace TutorClass.Application.Services;
 
@@ -153,10 +155,44 @@ public sealed class MaterialPedagogicoService
             a.MateriaId == materiaId &&
             a.Status != StatusAula.Cancelada);
 
-        if (!possuiAulaValida)
+        if (!possuiAulaValida && !PossuiMentoriaPedagogica(professorId, alunoId, materiaId))
         {
             throw new DomainException("Professor nao possui relacao pedagogica valida com o aluno para a materia informada.");
         }
+    }
+
+    private bool PossuiMentoriaPedagogica(Guid professorId, Guid alunoId, Guid materiaId)
+    {
+        return _db.Professores.Any(p => p.Id == professorId && p.Ativo && p.Status == StatusProfessor.Aprovado && p.OfereceMentoria)
+            && _db.ProfessoresMaterias.Any(pm => pm.ProfessorId == professorId && pm.MateriaId == materiaId)
+            && _db.MentoriasAlunoProfessor.Any(m => m.ProfessorId == professorId && m.AlunoId == alunoId && m.Ativo)
+            && _db.AssinaturasAluno.Any(a => a.AlunoId == alunoId && a.Ativa && a.Plano == PlanoAluno.Mentoria);
+    }
+
+    public Task<IReadOnlyCollection<DestinatarioMaterialResponse>> ListarDestinatariosAsync(Guid professorId, CancellationToken cancellationToken)
+    {
+        EnsureProfessorAtivo(professorId);
+        var aulas = _db.Aulas.Where(a => a.ProfessorId == professorId && a.Status != StatusAula.Cancelada).ToArray();
+        var pares = aulas.Select(a => (a.AlunoId, a.MateriaId)).ToHashSet();
+        var materias = _db.ProfessoresMaterias.Where(m => m.ProfessorId == professorId).Select(m => m.MateriaId).ToArray();
+        var mentorados = _db.MentoriasAlunoProfessor.Where(m => m.ProfessorId == professorId && m.Ativo).Select(m => m.AlunoId).ToArray();
+        foreach (var alunoId in mentorados)
+            foreach (var materiaId in materias)
+                if (PossuiMentoriaPedagogica(professorId, alunoId, materiaId))
+                    pares.Add((alunoId, materiaId));
+
+        var result = new List<DestinatarioMaterialResponse>();
+        foreach (var (alunoId, materiaId) in pares)
+        {
+            var aluno = _db.Usuarios.OfType<Aluno>().SingleOrDefault(a => a.Id == alunoId && a.Ativo);
+            var materia = _db.Materias.SingleOrDefault(m => m.Id == materiaId);
+            if (aluno is null || materia is null) continue;
+            result.Add(new DestinatarioMaterialResponse(aluno.Id, aluno.Nome, materia.Id, materia.Nome,
+                PossuiMentoriaPedagogica(professorId, aluno.Id, materia.Id),
+                aulas.Where(a => a.AlunoId == aluno.Id && a.MateriaId == materia.Id).OrderByDescending(a => a.InicioUtc)
+                    .Select(a => new AulaMaterialOpcao(a.Id, a.InicioUtc, a.Status.ToString())).ToArray()));
+        }
+        return Task.FromResult<IReadOnlyCollection<DestinatarioMaterialResponse>>(result.OrderBy(r => r.AlunoNome).ThenBy(r => r.MateriaNome).ToArray());
     }
 
     private void EnsureCanView(MaterialPedagogico material, Guid usuarioId, bool administrador, bool responsavel)

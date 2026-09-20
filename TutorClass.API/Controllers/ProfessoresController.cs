@@ -37,6 +37,22 @@ public sealed class ProfessoresController : ControllerBase
         return professor is null ? NotFound() : Ok(professor);
     }
 
+    [HttpGet("me/perfil")]
+    [Authorize(Policy = "Professor")]
+    [ProducesResponseType(typeof(ProfessorPerfilPrivadoDto), StatusCodes.Status200OK)]
+    public Task<ProfessorPerfilPrivadoDto> MeuPerfil(CancellationToken cancellationToken)
+    {
+        return _service.BuscarMeuPerfilAsync(User.GetUserId(), cancellationToken);
+    }
+
+    [HttpPut("me/perfil")]
+    [Authorize(Policy = "Professor")]
+    [ProducesResponseType(typeof(ProfessorPerfilPrivadoDto), StatusCodes.Status200OK)]
+    public Task<ProfessorPerfilPrivadoDto> AtualizarMeuPerfil(AtualizarPerfilProfessorRequest request, CancellationToken cancellationToken)
+    {
+        return _service.AtualizarMeuPerfilAsync(User.GetUserId(), request, cancellationToken);
+    }
+
     [HttpPost]
     [Authorize(Policy = "Administrador")]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]

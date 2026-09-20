@@ -18,6 +18,12 @@ public sealed class MateriaisController : ControllerBase
         _service = service;
     }
 
+    [HttpGet("destinatarios")]
+    [Authorize(Policy = "Professor")]
+    [ProducesResponseType(typeof(IReadOnlyCollection<DestinatarioMaterialResponse>), StatusCodes.Status200OK)]
+    public Task<IReadOnlyCollection<DestinatarioMaterialResponse>> ListarDestinatarios(CancellationToken cancellationToken)
+        => _service.ListarDestinatariosAsync(User.GetUserId(), cancellationToken);
+
     [HttpPost]
     [Authorize(Policy = "Professor")]
     [ProducesResponseType(typeof(MaterialResponse), StatusCodes.Status201Created)]

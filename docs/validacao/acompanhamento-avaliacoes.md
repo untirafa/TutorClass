@@ -2,6 +2,8 @@
 
 Esta versao adiciona acompanhamento pos-aula, avaliacao do professor por aula concluida e calculo de reputacao.
 
+Execute os comandos deste documento na pasta raiz TutorClass, onde esta TutorClass.slnx.
+
 ## 1. Restaurar, compilar e testar
 
 ```powershell

@@ -30,7 +30,7 @@ Não há conexão do frontend com Neon nem novos segredos em arquivos públicos.
 | scripts/check-auth.mjs | Import atualizado; mesma origem não exige preflight de CORS |
 | scripts/serve-frontend.mjs | Arquivos lidos de wwwroot; ferramenta opcional de prévia estática, não substitui a API |
 | README.md | Instruções atuais de publicação e desenvolvimento |
-| docs/Frontend-API-validacao.md | Relatório anterior preservado e identificado como histórico |
+| docs/historico/Frontend-API-validacao.md | Relatório anterior preservado e identificado como histórico |
 | docs/Frontend-publicacao.md | Este relatório |
 
 Os hashes SHA-256 de app.js, api.js, index.html e style.css coincidiram antes/depois da mudança de pasta. As correções locais ainda não publicadas foram preservadas. Nenhuma mudança no domínio, banco, migrations ou contratos de autenticação.

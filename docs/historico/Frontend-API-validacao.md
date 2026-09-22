@@ -1,4 +1,4 @@
-> Histórico da primeira etapa. A configuração e as instruções de CORS abaixo foram substituídas pela publicação na mesma origem. Consulte [Frontend-publicacao.md](Frontend-publicacao.md) para executar e publicar a versão atual. Os resultados registrados aqui são anteriores à reorganização em wwwroot.
+> Histórico da primeira etapa. A configuração e as instruções de CORS abaixo foram substituídas pela publicação na mesma origem. Consulte [Frontend-publicacao.md](../Frontend-publicacao.md) para executar e publicar a versão atual. Os resultados registrados aqui são anteriores à reorganização em wwwroot.
 
 # Integração do frontend com a API
 

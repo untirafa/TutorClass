@@ -39,7 +39,7 @@ Criados:
 - TutorClass.Application/Services/ContextoIaService.cs
 - TutorClass.Infrastructure/AI/GeminiTutorIaProvider.cs (provider, options, registro DI e excecao controlada)
 - TutorClass.Tests/GeminiTutorIaTests.cs
-- docs/TutorIA-Gemini-relatorio.md
+- docs/historico/TutorIA-Gemini-relatorio.md
 
 Alterados:
 - TutorClass.Application/DTOs/TutorIaDtos.cs: contexto no request interno do provider; request HTTP permanece apenas mensagem.

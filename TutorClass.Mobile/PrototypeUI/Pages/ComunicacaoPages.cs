@@ -73,7 +73,7 @@ public sealed class TutorIaPage : ComunicacaoPage
             };
             var user = new DataTrigger(typeof(Border)) { Binding = new Binding("Autor"), Value = "Você" };
             user.Setters.Add(new Setter { Property = BackgroundColorProperty, Value = Color.FromArgb("#E8EEF5") });
-            user.Setters.Add(new Setter { Property = MarginProperty, Value = new Thickness(24, 6, 0, 6) });
+            user.Setters.Add(new Setter { Property = View.MarginProperty, Value = new Thickness(24, 6, 0, 6) });
             bubble.Triggers.Add(user);
             return bubble;
         });

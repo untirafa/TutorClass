@@ -45,3 +45,12 @@ test('asteriscos de multiplicação e código permanecem intactos',()=>{
   const target=new Node('div');renderer.render(target,'2 * 3 * 4\n`**texto** \\frac{1}{2}`');
   assert.equal(target.textContent,'2 * 3 * 4**texto** \\frac{1}{2}');
 });
+
+test('itálico envolvendo negritos no exemplo de velocidade média',()=>{
+  const target=new Node('div');
+  renderer.render(target,'&#x20;Vamos calcular a **velocidade média**.\n*Um carro percorre **150 quilômetros (km)** em **2 horas (h)**.*');
+  assert.equal(target.textContent,' Vamos calcular a velocidade média.Um carro percorre 150 quilômetros (km) em 2 horas (h).');
+  const emphasis=target.children[1].children[1];
+  assert.equal(emphasis.tagName,'EM');
+  assert.equal(emphasis.children.filter(n=>n.tagName==='STRONG').length,2);
+});

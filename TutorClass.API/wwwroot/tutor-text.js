@@ -2,7 +2,7 @@
 // Small, text-only Markdown renderer: model output is never assigned to innerHTML.
 globalThis.TutorClassText = (() => {
   function math(value) {
-    let text = String(value);
+    let text = String(value).replace(/&#(?:x20|32);/gi, ' ');
     for (let i = 0; i < 12; i++) {
       const next = text.replace(/\\(?:dfrac|tfrac|frac)\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '($1)/($2)')
         .replace(/\\sqrt\s*\{([^{}]*)\}/g, '√($1)')
@@ -19,14 +19,15 @@ globalThis.TutorClassText = (() => {
       .replace(/([_^])\{([^{}]*)\}/g, '$1($2)');
   }
   function inline(parent, source) {
-    const tokens = /(`[^`\n]+`|\*\*[^*\n]+\*\*|__[^_\n]+__|(?<![\w*])\*(?!\s)[^*\n]+(?<!\s)\*(?![\w*]))/g;
+    const tokens = /(`[^`\n]+`|\*\*[^*\n]+\*\*|__[^_\n]+__|(?<![\w*])\*(?![\s*])(?:\*\*[^*\n]+\*\*|[^*\n])+(?<!\s)\*(?![\w*]))/g;
     let start = 0;
     for (const match of source.matchAll(tokens)) {
       parent.append(document.createTextNode(math(source.slice(start, match.index))));
       const code = match[0].startsWith('`');
       const italic = !code && !match[0].startsWith('**') && !match[0].startsWith('__');
       const node = document.createElement(code ? 'code' : italic ? 'em' : 'strong');
-      node.textContent = code ? match[0].slice(1, -1) : math(match[0].slice(italic ? 1 : 2, italic ? -1 : -2));
+      if (italic) inline(node, match[0].slice(1, -1));
+      else node.textContent = code ? match[0].slice(1, -1) : math(match[0].slice(2, -2));
       parent.append(node); start = match.index + match[0].length;
     }
     parent.append(document.createTextNode(math(source.slice(start))));

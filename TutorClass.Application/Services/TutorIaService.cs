@@ -53,6 +53,12 @@ public sealed class TutorIaService
             if (request.Mensagem.Length > 4000)
                 throw new DomainException("Mensagem para a TutorIA deve possuir no maximo 4000 caracteres.");
 
+            if (TutorIaModeracao.DeveBloquear(request.Mensagem))
+                return new TutorIaChatResponse(TutorIaPrompts.Nome, statusAntes.PossuiAcesso,
+                    statusAntes.Plano, TutorIaModeracao.Motivo, TutorIaModeracao.Aviso, null,
+                    statusAntes.LimiteDiario, statusAntes.UsadasHoje, statusAntes.RestantesHoje,
+                    statusAntes.LimiteAtingido, false, false);
+
             var contexto = await _contexto.ObterContextoAsync(alunoId, cancellationToken);
             string resposta;
             try

@@ -1203,7 +1203,8 @@ form .actions {
 .tutor-body { white-space: pre-wrap; }
 .tutor-body p, .tutor-body h4 { margin: 0 0 .65em; }
 .tutor-body p:last-child { margin-bottom: 0; }
-.tutor-body strong { display: inline; font-size: inherit; margin: 0; }
+.chat-message .tutor-body strong, .chat-message .tutor-body em { display: inline; font-family: inherit; font-size: inherit; line-height: inherit; letter-spacing: normal; margin: 0; }
+.chat-message .tutor-body em { font-style: italic; }
 .tutor-body ul, .tutor-body ol { margin: .4em 0; padding-left: 1.6em; }
 .tutor-body pre { overflow-x: auto; padding: 12px; background: #edf0f4; border-radius: 8px; }
 .tutor-body code { font-family: Consolas, monospace; white-space: pre-wrap; }

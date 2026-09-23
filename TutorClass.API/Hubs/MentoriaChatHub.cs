@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using TutorClass.API.Security;
 using TutorClass.Application.DTOs;
+using TutorClass.Application.Abstractions;
 using TutorClass.Application.Services;
 
 namespace TutorClass.API.Hubs;
@@ -26,11 +27,20 @@ public sealed class MentoriaChatHub : Hub
 
     public async Task<MensagemMentoriaResponse> EnviarMensagem(Guid vinculoMentoriaId, string conteudo)
     {
-        var mensagem = await _service.EnviarMensagemAsync(
-            vinculoMentoriaId,
-            Context.User!.GetUserId(),
-            new EnviarMensagemMentoriaRequest(conteudo),
-            Context.ConnectionAborted);
+        MensagemMentoriaResponse mensagem;
+        try
+        {
+            mensagem = await _service.EnviarMensagemAsync(
+                vinculoMentoriaId,
+                Context.User!.GetUserId(),
+                new EnviarMensagemMentoriaRequest(conteudo),
+                Context.ConnectionAborted);
+        }
+        catch (MensagemMentoriaBloqueadaException ex)
+        {
+            // Invocation failure only: never broadcast a moderation notice to the group.
+            throw new HubException($"{MensagemMentoriaBloqueadaException.Codigo}|{ex.Categoria}|{ex.Message}");
+        }
 
         await Clients.Group(GroupName(vinculoMentoriaId)).SendAsync("MensagemRecebida", mensagem, Context.ConnectionAborted);
         return mensagem;

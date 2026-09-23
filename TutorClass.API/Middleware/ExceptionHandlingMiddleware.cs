@@ -21,6 +21,16 @@ public sealed class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (MensagemMentoriaBloqueadaException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                codigo = MensagemMentoriaBloqueadaException.Codigo,
+                categoria = ex.Categoria,
+                error = ex.Message
+            });
+        }
         catch (DomainException ex)
         {
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;

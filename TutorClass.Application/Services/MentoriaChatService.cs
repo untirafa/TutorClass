@@ -59,6 +59,7 @@ public sealed class MentoriaChatService
             throw new DomainException("Mensagem deve possuir no maximo 2000 caracteres.");
         }
 
+        ModeracaoChatHumano.Validar(request.Conteudo);
         var chat = await _store.ObterOuCriarChatAsync(vinculo, cancellationToken);
         return await _store.SalvarMensagemAsync(chat, remetenteUsuarioId, GetUsuarioNome(remetenteUsuarioId), request.Conteudo.Trim(), cancellationToken);
     }

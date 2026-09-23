@@ -24,6 +24,137 @@ namespace TutorClass.Tests;
 public sealed class MentoriaChatTests
 {
     [Fact]
+    public async Task SignalR_websocket_retorna_falha_identificavel_na_invocacao()
+    {
+        var store = new InMemoryChatStore();
+        await using var factory = new TutorClassApiFactory(services =>
+        {
+            services.RemoveAll<IMentoriaChatStore>(); services.AddSingleton<IMentoriaChatStore>(store);
+        });
+        var client = factory.CreateClient(); var scenario = await SeedHttpScenarioAsync(factory);
+        await AuthorizeAsync(client,"aluno.http.chat@teste.local","TutorClass@123");
+        var token = client.DefaultRequestHeaders.Authorization!.Parameter!;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var socket = await factory.Server.CreateWebSocketClient().ConnectAsync(
+            new Uri("ws://localhost/hubs/mentoria-chat?access_token="+Uri.EscapeDataString(token)),timeout.Token);
+        async Task Send(string json) => await socket.SendAsync(System.Text.Encoding.UTF8.GetBytes(json+"\u001e").AsMemory(),
+            System.Net.WebSockets.WebSocketMessageType.Text,true,timeout.Token);
+        async Task<string> Receive()
+        {
+            var bytes = new byte[4096]; var text = new System.Text.StringBuilder();
+            System.Net.WebSockets.ValueWebSocketReceiveResult part;
+            do
+            {
+                part=await socket.ReceiveAsync(bytes.AsMemory(),timeout.Token);
+                text.Append(System.Text.Encoding.UTF8.GetString(bytes,0,part.Count));
+            } while(!part.EndOfMessage);
+            return text.ToString();
+        }
+        await Send("{\"protocol\":\"json\",\"version\":1}");
+        Assert.Contains("{}",await Receive());
+        await Send(System.Text.Json.JsonSerializer.Serialize(new
+        { type=1, invocationId="blocked", target="EnviarMensagem", arguments=new object[]{scenario.VinculoId,"Você é uma idiota"} }));
+        var wire=await Receive();
+        using var completion=System.Text.Json.JsonDocument.Parse(wire.Split('\u001e')[0]);
+        Assert.Equal(3,completion.RootElement.GetProperty("type").GetInt32());
+        Assert.Equal("blocked",completion.RootElement.GetProperty("invocationId").GetString());
+        Assert.Contains("MENSAGEM_BLOQUEADA|OFENSA_DIRECIONADA|",completion.RootElement.GetProperty("error").GetString());
+        Assert.False(completion.RootElement.TryGetProperty("result",out _));
+        Assert.DoesNotContain("MensagemRecebida",wire); Assert.DoesNotContain("idiota",wire);
+        Assert.Equal(0,store.OpenCalls); Assert.Equal(0,store.SaveCalls); Assert.Empty(store.Messages);
+        socket.Abort();
+    }
+
+    [Theory]
+    [InlineData("Você é uma idiota!", "OFENSA_DIRECIONADA")]
+    [InlineData("Professora, sua imbecil!!!", "OFENSA_DIRECIONADA")]
+    [InlineData("Vai se foder", "OFENSA_DIRECIONADA")]
+    [InlineData("Vou te matar amanhã", "AMEACA_EXPLICITA")]
+    [InlineData("Vou te agredir", "AMEACA_EXPLICITA")]
+    public async Task Moderacao_direta_bloqueia_ambos_participantes_antes_do_store(string texto, string categoria)
+    {
+        await using var db = CreateDbContext(); var scenario = SeedScenario(db);
+        var store = new InMemoryChatStore(); var service = new MentoriaChatService(db,store);
+        foreach(var sender in new[]{scenario.AlunoId,scenario.ProfessorId})
+        {
+            var error = await Assert.ThrowsAsync<MensagemMentoriaBloqueadaException>(() =>
+                service.EnviarMensagemAsync(scenario.VinculoId,sender,new(texto),default));
+            Assert.Equal(categoria,error.Categoria); Assert.DoesNotContain(texto,error.Message);
+        }
+        Assert.Equal(0,store.OpenCalls); Assert.Equal(0,store.SaveCalls); Assert.Empty(store.Messages);
+    }
+
+    [Theory]
+    [InlineData("idiota")]
+    [InlineData("O que significa imbecil nesse texto?")]
+    [InlineData("Me chamaram de idiota na escola, preciso de ajuda.")]
+    [InlineData("Ameaçaram-me dizendo: vou te matar amanhã.")]
+    [InlineData("\"Você é uma idiota!\"")]
+    [InlineData("Analise a frase 'vou te matar' e o bullying.")]
+    [InlineData("Sofri violência e assédio. Posso conversar?")]
+    [InlineData("Vou te matar de rir com essa piada")]
+    [InlineData("Não diga você é um idiota aos colegas.")]
+    public async Task Moderacao_preserva_mensagens_legitimas_e_texto_original(string texto)
+    {
+        await using var db = CreateDbContext(); var scenario = SeedScenario(db);
+        var store = new InMemoryChatStore(); var service = new MentoriaChatService(db,store);
+        var saved = await service.EnviarMensagemAsync(scenario.VinculoId,scenario.AlunoId,new(texto),default);
+        Assert.Equal(texto,saved.Conteudo); Assert.Equal(scenario.AlunoId,saved.RemetenteUsuarioId);
+        Assert.Equal(1,store.OpenCalls); Assert.Equal(1,store.SaveCalls);
+    }
+
+    [Fact]
+    public async Task Autorizacao_e_tamanho_precedem_moderacao()
+    {
+        await using var db = CreateDbContext(); var scenario = SeedScenario(db);
+        var store = new InMemoryChatStore(); var service = new MentoriaChatService(db,store);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.EnviarMensagemAsync(scenario.VinculoId,Guid.NewGuid(),new("Você é idiota"),default));
+        await Assert.ThrowsAsync<DomainException>(() => service.EnviarMensagemAsync(scenario.VinculoId,scenario.AlunoId,new("Você é idiota" + new string('!',2000)),default));
+        Assert.Equal(0,store.OpenCalls); Assert.Equal(0,store.SaveCalls);
+    }
+
+    [Fact]
+    public async Task Hub_bloqueia_sem_emitir_evento_e_permite_reformular()
+    {
+        await using var db = CreateDbContext(); var scenario = SeedScenario(db);
+        var store = new InMemoryChatStore(); var proxy = new FakeClientProxy();
+        var hub = new MentoriaChatHub(new MentoriaChatService(db,store))
+        { Context = new FakeHubCallerContext(scenario.AlunoId), Clients = new FakeHubCallerClients(proxy) };
+        var error = await Assert.ThrowsAsync<HubException>(()=>hub.EnviarMensagem(scenario.VinculoId,"Você é uma idiota"));
+        Assert.StartsWith("MENSAGEM_BLOQUEADA|OFENSA_DIRECIONADA|",error.Message);
+        Assert.DoesNotContain("idiota",error.Message);
+        Assert.Empty(proxy.Invocations); Assert.Empty(store.Messages); Assert.Equal(0,store.OpenCalls); Assert.Equal(0,store.SaveCalls);
+        var saved = await hub.EnviarMensagem(scenario.VinculoId,"Professora, preciso de ajuda.");
+        Assert.Single(proxy.Invocations); Assert.Single(store.Messages); Assert.Equal(scenario.AlunoId,saved.RemetenteUsuarioId);
+    }
+
+    [Fact]
+    public async Task Http_bloqueia_sem_persistir_ou_publicar_e_preserva_sucesso()
+    {
+        var store = new InMemoryChatStore(); var proxy = new FakeClientProxy();
+        await using var factory = new TutorClassApiFactory(services =>
+        {
+            services.RemoveAll<IMentoriaChatStore>(); services.AddSingleton<IMentoriaChatStore>(store);
+            services.AddSingleton<IHubContext<MentoriaChatHub>>(new FakeHubContext(proxy));
+        });
+        var client = factory.CreateClient(); var scenario = await SeedHttpScenarioAsync(factory);
+        await AuthorizeAsync(client,"aluno.http.chat@teste.local","TutorClass@123");
+        var path=$"/api/mentorias/{scenario.VinculoId}/chat/mensagens";
+        var response=await client.PostAsJsonAsync(path,new EnviarMensagemMentoriaRequest("Vou te matar"));
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest,response.StatusCode);
+        using var body=System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("MENSAGEM_BLOQUEADA",body.RootElement.GetProperty("codigo").GetString());
+        Assert.Equal("AMEACA_EXPLICITA",body.RootElement.GetProperty("categoria").GetString());
+        Assert.Contains("Mensagem não enviada",body.RootElement.GetProperty("error").GetString());
+        Assert.DoesNotContain("Vou te matar",body.RootElement.ToString());
+        Assert.Empty(proxy.Invocations); Assert.Empty(store.Messages); Assert.Equal(0,store.OpenCalls); Assert.Equal(0,store.SaveCalls);
+        var ok=await client.PostAsJsonAsync(path,new EnviarMensagemMentoriaRequest("Preciso de ajuda com um relato de violência."));
+        Assert.Equal(System.Net.HttpStatusCode.Created,ok.StatusCode);
+        Assert.Single(proxy.Invocations); Assert.Single(store.Messages);
+        Assert.Equal(scenario.AlunoId,(await ok.Content.ReadFromJsonAsync<MensagemMentoriaResponse>())!.RemetenteUsuarioId);
+    }
+
+    [Fact]
     public async Task Aluno_e_professor_do_vinculo_acessam_chat()
     {
         await using var db = CreateDbContext();
@@ -311,10 +442,13 @@ public sealed class MentoriaChatTests
     {
         private readonly List<MentoriaChatResponse> _chats = [];
         public List<MensagemMentoriaResponse> Messages { get; } = [];
+        public int OpenCalls { get; private set; }
+        public int SaveCalls { get; private set; }
         public bool Configurado => true;
 
         public Task<MentoriaChatResponse> ObterOuCriarChatAsync(MentoriaAlunoProfessor vinculo, CancellationToken cancellationToken)
         {
+            OpenCalls++;
             var chat = _chats.SingleOrDefault(c => c.VinculoMentoriaId == vinculo.Id);
             if (chat is null)
             {
@@ -327,6 +461,7 @@ public sealed class MentoriaChatTests
 
         public Task<MensagemMentoriaResponse> SalvarMensagemAsync(MentoriaChatResponse chat, Guid remetenteUsuarioId, string remetenteNome, string conteudo, CancellationToken cancellationToken)
         {
+            SaveCalls++;
             var message = new MensagemMentoriaResponse(Guid.NewGuid().ToString("N"), chat.Id, chat.VinculoMentoriaId, remetenteUsuarioId, remetenteNome, conteudo, DateTime.UtcNow.AddMilliseconds(Messages.Count), false, null);
             Messages.Add(message);
             return Task.FromResult(message);
@@ -401,7 +536,7 @@ public sealed class MentoriaChatTests
         }
     }
 
-    private sealed class FakeHubCallerClients : IHubCallerClients
+    private sealed class FakeHubCallerClients : IHubCallerClients, IHubClients
     {
         private readonly IClientProxy _proxy;
 
@@ -422,6 +557,12 @@ public sealed class MentoriaChatTests
         public IClientProxy User(string userId) => _proxy;
         public IClientProxy Users(IReadOnlyList<string> userIds) => _proxy;
         public IClientProxy OthersInGroup(string groupName) => _proxy;
+    }
+
+    private sealed class FakeHubContext(IClientProxy proxy) : IHubContext<MentoriaChatHub>
+    {
+        public IHubClients Clients { get; } = new FakeHubCallerClients(proxy);
+        public IGroupManager Groups { get; } = new FakeGroupManager();
     }
 
     private sealed class FakeClientProxy : IClientProxy

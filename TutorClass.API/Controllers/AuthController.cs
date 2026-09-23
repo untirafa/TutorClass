@@ -19,6 +19,7 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("registrar/aluno")]
+    [LimiteRequisicoes("cadastro", 10)]
     [ProducesResponseType(typeof(UsuarioAutenticadoDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<UsuarioAutenticadoDto>> RegistrarAluno(RegistrarAlunoRequest request, CancellationToken cancellationToken)
     {
@@ -28,6 +29,7 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("registrar/responsavel")]
+    [LimiteRequisicoes("cadastro", 10)]
     [ProducesResponseType(typeof(UsuarioAutenticadoDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<UsuarioAutenticadoDto>> RegistrarResponsavel(RegistrarResponsavelRequest request, CancellationToken cancellationToken)
     {
@@ -37,6 +39,7 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("registrar/professor")]
+    [LimiteRequisicoes("cadastro", 10)]
     [ProducesResponseType(typeof(UsuarioAutenticadoDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<UsuarioAutenticadoDto>> RegistrarProfessor(RegistrarProfessorRequest request, CancellationToken cancellationToken)
     {
@@ -46,6 +49,7 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("login")]
+    [LimiteRequisicoes("login", 20)]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<LoginResponse>> Login(LoginRequest request, CancellationToken cancellationToken)
     {

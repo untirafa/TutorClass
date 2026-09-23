@@ -37,6 +37,7 @@ public sealed class MentoriaChatController : ControllerBase
     }
 
     [HttpPost("mensagens")]
+    [LimiteRequisicoes("mentoria", 60)]
     [ProducesResponseType(typeof(MensagemMentoriaResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<MensagemMentoriaResponse>> EnviarMensagem(Guid vinculoMentoriaId, EnviarMensagemMentoriaRequest request, CancellationToken cancellationToken)
     {

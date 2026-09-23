@@ -74,20 +74,14 @@ public sealed class MentoriaChatService
         return new MensagensMentoriaPageResponse(mensagens, proximo);
     }
 
-    public async Task<MensagensMentoriaPageResponse> ListarMensagensParaResponsavelAsync(
+    public Task<MensagensMentoriaPageResponse> ListarMensagensParaResponsavelAsync(
         Guid vinculoMentoriaId,
         Guid responsavelId,
         int? limit,
         DateTime? beforeUtc,
         CancellationToken cancellationToken)
     {
-        var vinculo = GetVinculo(vinculoMentoriaId);
-        _responsaveis.ValidarVinculo(responsavelId, vinculo.AlunoId);
-
-        var take = Math.Clamp(limit ?? DefaultLimit, 1, MaxLimit);
-        var mensagens = await _store.ListarMensagensAsync(vinculoMentoriaId, take, beforeUtc, cancellationToken);
-        DateTime? proximo = mensagens.Count == take ? mensagens.Min(m => m.DataEnvioUtc) : null;
-        return new MensagensMentoriaPageResponse(mensagens, proximo);
+        throw new UnauthorizedAccessException("Responsáveis não têm acesso às mensagens privadas da Mentoria. Consulte os resumos de acompanhamento autorizados.");
     }
 
     public async Task<MensagensLidasResponse> MarcarComoLidasAsync(Guid vinculoMentoriaId, Guid usuarioId, CancellationToken cancellationToken)

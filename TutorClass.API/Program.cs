@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Microsoft.AspNetCore.SignalR;
 using TutorClass.API.Hubs;
 using TutorClass.API.Configuration;
 using TutorClass.API.Middleware;
@@ -28,7 +29,10 @@ builder.Services.AddControllers()
     });
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSignalR();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<ControleAbuso>();
+builder.Services.AddSingleton<LimiteChatHubFilter>();
+builder.Services.AddSignalR(options => options.AddFilter<LimiteChatHubFilter>());
 var configuredCorsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
 {

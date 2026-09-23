@@ -201,7 +201,7 @@ public sealed class ResponsavelPermissoesTests
     }
 
     [Fact]
-    public async Task Responsavel_vinculado_le_historico_do_chat_somente_leitura()
+    public async Task Responsavel_vinculado_nao_le_historico_privado()
     {
         await using var db = CreateDbContext();
         var cenario = SeedScenario(db);
@@ -209,10 +209,10 @@ public sealed class ResponsavelPermissoesTests
         var chat = new MentoriaChatService(db, store);
         await chat.EnviarMensagemAsync(cenario.VinculoMentoriaId, cenario.AlunoId, new EnviarMensagemMentoriaRequest("Oi, mentor"), CancellationToken.None);
 
-        var historico = await chat.ListarMensagensParaResponsavelAsync(cenario.VinculoMentoriaId, cenario.ResponsavelId, 30, null, CancellationToken.None);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => chat.ListarMensagensParaResponsavelAsync(cenario.VinculoMentoriaId, cenario.ResponsavelId, 30, null, CancellationToken.None));
 
-        var mensagem = Assert.Single(historico.Mensagens);
-        Assert.Equal("Oi, mentor", mensagem.Conteudo);
+
+
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public sealed class ResponsavelPermissoesTests
     }
 
     [Fact]
-    public async Task Historico_de_chat_encerrado_continua_visivel_para_responsavel_vinculado()
+    public async Task Historico_de_chat_encerrado_nao_e_exposto_ao_responsavel()
     {
         await using var db = CreateDbContext();
         var cenario = SeedScenario(db);
@@ -255,9 +255,9 @@ public sealed class ResponsavelPermissoesTests
         db.MentoriasAlunoProfessor.Single(m => m.Id == cenario.VinculoMentoriaId).Encerrar(MotivoEncerramentoMentoria.TrocaSolicitadaPeloAluno);
         await db.SaveChangesAsync();
 
-        var historico = await chat.ListarMensagensParaResponsavelAsync(cenario.VinculoMentoriaId, cenario.ResponsavelId, 30, null, CancellationToken.None);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => chat.ListarMensagensParaResponsavelAsync(cenario.VinculoMentoriaId, cenario.ResponsavelId, 30, null, CancellationToken.None));
 
-        Assert.Single(historico.Mensagens);
+
     }
 
     [Fact]

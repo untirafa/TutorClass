@@ -32,6 +32,7 @@ public sealed class TutorIaController : ControllerBase
     }
 
     [HttpPost("chat")]
+    [LimiteRequisicoes("tutoria", 12)]
     [ProducesResponseType(typeof(TutorIaChatResponse), StatusCodes.Status200OK)]
     public async Task<TutorIaChatResponse> Chat(TutorIaChatRequest request, CancellationToken cancellationToken)
     {
@@ -39,6 +40,7 @@ public sealed class TutorIaController : ControllerBase
     }
 
     [HttpPost("chat/stream")]
+    [LimiteRequisicoes("tutoria", 12)]
     [Produces("text/event-stream")]
     public async Task Stream(TutorIaChatRequest request, CancellationToken cancellationToken)
     {

@@ -30,7 +30,11 @@ public sealed class TutorIaService
         return Task.FromResult(BuildStatus(alunoId));
     }
 
-    public async Task<TutorIaChatResponse> ConversarAsync(Guid alunoId, TutorIaChatRequest request, CancellationToken cancellationToken)
+    public Task<TutorIaChatResponse> ConversarAsync(Guid alunoId, TutorIaChatRequest request, CancellationToken cancellationToken)
+        => ConversarAsync(alunoId, request, null, cancellationToken);
+
+    public async Task<TutorIaChatResponse> ConversarAsync(Guid alunoId, TutorIaChatRequest request,
+        Func<string, CancellationToken, Task>? receberTexto, CancellationToken cancellationToken)
     {
         EnsureAlunoAtivo(alunoId);
 
@@ -53,9 +57,11 @@ public sealed class TutorIaService
             string resposta;
             try
             {
-                resposta = await _provider.ResponderAsync(
-                    new TutorIaProviderRequest(alunoId, statusAntes.Plano, request.Mensagem.Trim(), GetHojeBrasil(), contexto, _memoria.Obter(alunoId)),
-                    cancellationToken);
+                var pergunta = new TutorIaProviderRequest(alunoId, statusAntes.Plano, request.Mensagem.Trim(),
+                    GetHojeBrasil(), contexto, _memoria.Obter(alunoId));
+                resposta = receberTexto is null
+                    ? await _provider.ResponderAsync(pergunta, cancellationToken)
+                    : await _provider.ResponderProgressivamenteAsync(pergunta, receberTexto, cancellationToken);
                 if (string.IsNullOrWhiteSpace(resposta)) throw new InvalidOperationException("Resposta vazia.");
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }

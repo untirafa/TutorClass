@@ -14,7 +14,21 @@ public sealed class TutorIaResponse
     public string? Resposta { get; init; }
 }
 public sealed record TutorIaChatRequest(string Mensagem);
-public sealed record MensagemIaItem(string Autor, string Texto);
+public sealed class MensagemIaItem(string autor, string texto) : System.ComponentModel.INotifyPropertyChanged
+{
+    public string Autor { get; } = autor;
+    public string Texto { get; private set; } = texto;
+    public bool Interrompida { get; private set; }
+    public string TextoApresentacao => (Autor == "Você" ? Texto : TutorIaTexto.Formatar(Texto)) +
+        (Interrompida ? "\n\nResposta incompleta. Atualize o status antes de tentar novamente." : "");
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    public void Atualizar(string valor, bool interrompida = false)
+    {
+        Texto = valor; Interrompida = interrompida;
+        PropertyChanged?.Invoke(this, new(nameof(Texto)));
+        PropertyChanged?.Invoke(this, new(nameof(TextoApresentacao)));
+    }
+}
 public sealed class NotificacaoDto
 {
     public Guid Id { get; init; }

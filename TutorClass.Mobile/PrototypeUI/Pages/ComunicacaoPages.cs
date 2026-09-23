@@ -69,7 +69,7 @@ public sealed class TutorIaPage : ComunicacaoPage
             var bubble = new Border
             {
                 Padding = 14, Margin = new Thickness(0, 6, 24, 6), BackgroundColor = Colors.White,
-                Content = new VerticalStackLayout { Spacing = 8, Children = { Texto("Autor", 14), Texto("Texto", 17) } }
+                Content = new VerticalStackLayout { Spacing = 8, Children = { Texto("Autor", 14), Texto("TextoApresentacao", 17) } }
             };
             var user = new DataTrigger(typeof(Border)) { Binding = new Binding("Autor"), Value = "Você" };
             user.Setters.Add(new Setter { Property = BackgroundColorProperty, Value = Color.FromArgb("#E8EEF5") });

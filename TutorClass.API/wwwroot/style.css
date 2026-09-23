@@ -1199,6 +1199,17 @@ form .actions {
   margin-bottom: 5px;
 }
 
+.tutor-message { white-space: normal; line-height: 1.65; }
+.tutor-body { white-space: pre-wrap; }
+.tutor-body p, .tutor-body h4 { margin: 0 0 .65em; }
+.tutor-body p:last-child { margin-bottom: 0; }
+.tutor-body strong { display: inline; font-size: inherit; margin: 0; }
+.tutor-body ul, .tutor-body ol { margin: .4em 0; padding-left: 1.6em; }
+.tutor-body pre { overflow-x: auto; padding: 12px; background: #edf0f4; border-radius: 8px; }
+.tutor-body code { font-family: Consolas, monospace; white-space: pre-wrap; }
+.tutor-progress { color: #526475; margin-top: 8px; }
+.tutor-interrupted { color: #9f1239; margin-top: 8px; }
+
 /* ==========================================================================
    19. MODAL / DIALOG
    ========================================================================== */

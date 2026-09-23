@@ -105,7 +105,7 @@ public class GeminiTutorIaTests
     public async Task Falhas_controladas_nao_consumem(int status, string body, string categoria)
     {
         using var client = new HttpClient(new Handler(status, body));
-        var provider = new GeminiTutorIaProvider(client, new() { ApiKey="fake", Model="fake" }, NullLogger<GeminiTutorIaProvider>.Instance);
+        var provider = new GeminiTutorIaProvider(client, new() { ApiKey="fake", Model="fake", FallbackModel="" }, NullLogger<GeminiTutorIaProvider>.Instance);
         var ex = await Assert.ThrowsAsync<TutorIaProviderException>(() => provider.ResponderAsync(new(Guid.NewGuid(), PlanoAluno.Foco,"oi",default,new()),default));
         Assert.Equal(categoria, ex.Categoria);
         await using var db = Db(); var aluno = Seed(db);
@@ -119,7 +119,7 @@ public class GeminiTutorIaTests
         var handler = new Handler(200,"{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Resposta\"}]}}]}");
         using var client = new HttpClient(handler);
         await using var db = Db(); var aluno = Seed(db);
-        var provider = new GeminiTutorIaProvider(client,new() { ApiKey="fake",Model="fake" },NullLogger<GeminiTutorIaProvider>.Instance);
+        var provider = new GeminiTutorIaProvider(client,new() { ApiKey="fake",Model="fake", FallbackModel="" },NullLogger<GeminiTutorIaProvider>.Instance);
         var result = await new TutorIaService(db,provider).ConversarAsync(aluno.Id,new("Qual meu plano?"),default);
         Assert.Equal("Resposta",result.Resposta);
         Assert.Equal(1,db.UsosIaAluno.Single().Quantidade);
@@ -151,7 +151,7 @@ public class GeminiTutorIaTests
             new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
         var handler = new Handler(200,"""{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""");
         using var client = new HttpClient(handler);
-        var provider = new GeminiTutorIaProvider(client, new() { ApiKey="fake", Model="fake" }, NullLogger<GeminiTutorIaProvider>.Instance);
+        var provider = new GeminiTutorIaProvider(client, new() { ApiKey="fake", Model="fake", FallbackModel="" }, NullLogger<GeminiTutorIaProvider>.Instance);
         await new TutorIaService(db,provider).ConversarAsync(aluno.Id,request,default);
         Assert.DoesNotContain("INVASOR",handler.Body);
         Assert.DoesNotContain("999",handler.Body);
@@ -166,7 +166,7 @@ public class GeminiTutorIaTests
         using var http = new HttpClient(new Handler(status,
             status == 200 ? """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""" :
             """{"error":{"code":503,"status":"UNAVAILABLE","message":"high demand"}}"""));
-        var provider = new GeminiTutorIaProvider(http, new() { ApiKey="fake", Model="fake" }, NullLogger<GeminiTutorIaProvider>.Instance);
+        var provider = new GeminiTutorIaProvider(http, new() { ApiKey="fake", Model="fake", FallbackModel="" }, NullLogger<GeminiTutorIaProvider>.Instance);
         await using var factory = new TutorClassApiFactory(services => services.AddScoped<ITutorIaProvider>(_ => provider));
         using var client = factory.CreateClient();
         using (var scope = factory.Services.CreateScope())
@@ -223,7 +223,7 @@ public class GeminiTutorIaTests
         using var client = new HttpClient(new Handler(503,
             """{"error":{"code":503,"status":"UNAVAILABLE","message":"high demand PROMPT_PRIVADO CHAVE_PRIVADA","details":["CONTEXTO_PRIVADO"]}}"""));
         var log = new CaptureLogger();
-        var provider = new GeminiTutorIaProvider(client, new() { ApiKey="CHAVE_PRIVADA", Model="modelo-teste" }, log);
+        var provider = new GeminiTutorIaProvider(client, new() { ApiKey="CHAVE_PRIVADA", Model="modelo-teste", FallbackModel="" }, log);
         await Assert.ThrowsAsync<TutorIaProviderException>(() => provider.ResponderAsync(
             new(Guid.NewGuid(), PlanoAluno.Foco, "PROMPT_PRIVADO", default, new()), default));
         Assert.Contains("HttpStatus=503", log.Text);

@@ -4,7 +4,8 @@ import {readFile} from 'node:fs/promises';
 const files = new Map([
   ['/', ['index.html', 'text/html']], ['/index.html', ['index.html', 'text/html']],
   ['/style.css', ['style.css', 'text/css']], ['/app.js', ['app.js', 'text/javascript']],
-  ['/api.js', ['api.js', 'text/javascript']], ['/config.js', ['config.js', 'text/javascript']]
+  ['/api.js', ['api.js', 'text/javascript']], ['/config.js', ['config.js', 'text/javascript']],
+  ['/tutor-text.js', ['tutor-text.js', 'text/javascript']]
 ]);
 const port = Number(process.env.PORT || 5242);
 const server = createServer(async (request, response) => {

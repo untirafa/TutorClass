@@ -55,7 +55,7 @@ public sealed class TutorIaPage : ComunicacaoPage
         messages.ItemTemplate = new DataTemplate(() => new Border
         {
             Margin = new Thickness(0, 5), Padding = 12, BackgroundColor = Colors.White,
-            Content = new VerticalStackLayout { Spacing = 6, Children = { Texto("Autor", 14), Texto("Texto") } }
+            Content = new VerticalStackLayout { Spacing = 6, Children = { Texto("Autor", 14), Texto("TextoApresentacao") } }
         });
         var editor = new Editor { Placeholder = "Escreva sua mensagem", HeightRequest = 95, AutomationId = "TutorIaMensagem" };
         editor.SetBinding(Editor.TextProperty, "Mensagem");

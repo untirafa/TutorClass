@@ -39,7 +39,7 @@ async function run(button,fn,errorTarget){if(button.disabled)return;button.disab
 function button(label,fn,cls='secondary'){const b=el('button',label,cls);b.type='button';b.addEventListener('click',()=>run(b,fn));return b;}
 function submit(form,fn){form.addEventListener('submit',e=>{e.preventDefault();run(e.submitter || form.querySelector('[type=submit]'),()=>fn(Object.fromEntries(new FormData(form))));});}
 function stopChat(){clearInterval(state.chatTimer);state.chatTimer=null;}
-function resetSession(){stopChat();state.epoch++;state.user=null;state.token=null;state.tutorHistory=[];$('workspace-content').replaceChildren();$('sidebar-name').textContent='';$('sidebar-role').textContent='';$('modal').close();$('auth-form').reset();}
+function resetSession(){stopChat();state.tutorStream?.abort();state.epoch++;state.user=null;state.token=null;state.tutorHistory=[];$('workspace-content').replaceChildren();$('sidebar-name').textContent='';$('sidebar-role').textContent='';$('modal').close();$('auth-form').reset();}
 // Autenticação explícita por requisição: nenhum JWT é enviado aos endpoints públicos.
 async function api(path,{method='GET',body,auth=true}={}){
   if(auth&&!state.token)throw new Error('Entre na sua conta para continuar.');
@@ -137,7 +137,7 @@ $('auth-form').addEventListener('submit',e=>{e.preventDefault();run($('auth-subm
   notice('Bem-vindo à sua área.');location.hash='app/inicio';
 },$('auth-feedback'));});
 const menus=[['inicio','Visão geral'],['professores','Encontrar professores','Aluno'],['alunos','Meus alunos','Professor'],['aulas','Minhas aulas','Aluno|Professor'],['materiais','Materiais e atividades','Aluno|Professor'],['mentoria','Mentoria e chat','Aluno|Professor'],['acompanhamentos','Acompanhamentos','Aluno|Professor'],['tutoria','TutorIA','Aluno'],['planos','Planos','Aluno'],['gravacoes','Gravações','Aluno'],['financeiro','Financeiro','Aluno|Professor'],['notificacoes','Notificações'],['profissional','Perfil profissional','Professor'],['disponibilidade','Disponibilidade','Professor'],['analise','Análise de professores','Administrador'],['conta','Minha conta'],['ajuda','Ajuda']];
-function route(){stopChat();const hash=location.hash.slice(1)||'home';const auth=['login','cadastro-aluno','cadastro-professor'].includes(hash),app=hash.startsWith('app/');if(app&&!state.user){location.hash='login';return;}
+function route(){stopChat();state.tutorStream?.abort();const hash=location.hash.slice(1)||'home';const auth=['login','cadastro-aluno','cadastro-professor'].includes(hash),app=hash.startsWith('app/');if(app&&!state.user){location.hash='login';return;}
   $('landing').hidden=auth||app;$('auth-view').hidden=!auth;$('workspace').hidden=!app;$('footer').hidden=app;document.querySelector('.public-nav').hidden=app;$('account-link').textContent=state.user?'Minha área ↗':'Entrar ↗';$('account-link').href=state.user?'#app/inicio':'#login';
   if(auth){if(hash==='cadastro-professor')$('auth-role').value='Professor';if(hash==='cadastro-aluno')$('auth-role').value='Aluno';renderAuth();window.scrollTo(0,0);}
   else if(app){$('sidebar-name').textContent=state.user.nome;$('sidebar-role').textContent=state.user.perfil;$('workspace-nav').replaceChildren(...menus.filter(menuAllowed).map(m=>{const a=link(m[1],`#app/${m[0]}`);a.className=hash===`app/${m[0]}`?'active':'';return a;}));renderWorkspace();}
@@ -225,9 +225,54 @@ function editMentoringFollowup(a,complete){formDialog(complete?'Concluir acompan
 views.planos=async host=>{const [plan,usage]=await Promise.all([get('/api/planos/me'),get('/api/planos/me/ia')]);host.replaceChildren();const current=el('div',null,'panel');append(current,el('h3',`Plano atual: ${plan.planoAtual}`),details({'Assinatura ativa':plan.assinaturaAtiva?'Sim':'Não','IA educacional':plan.possuiIaEducacional?'Incluída':'Não incluída','Uso de IA hoje':usage.quantidadeUsadaHoje,'Limite diário':usage.limiteDiario??'Sem limite do plano','Mentoria':plan.possuiMentoria?'Incluída':'Não incluída','Gravações elegíveis':plan.possuiGravacoesElegiveis?'Incluídas':'Não incluídas'}));if(plan.assinaturaAtiva)current.append(button('Cancelar assinatura',()=>confirmAction('Cancelar assinatura','Os benefícios serão encerrados conforme as regras do plano. As aulas contratadas continuam independentes.',()=>mutate('/api/planos/me/cancelar')),'danger'));host.append(current,text('Aulas são cobradas separadamente. As promoções só se aplicam à primeira assinatura elegível e não voltam após cancelamento.'));const grid=el('div',null,'cards');planCards(grid,true);host.append(grid);};
 views.tutoria=async host=>{const status=await get('/api/tutoria/status');host.replaceChildren();const statusText=text('','inline-message');const log=el('div',null,'chat-log');log.setAttribute('role','log');log.setAttribute('aria-live','polite');const fields=[field('mensagem','Qual é sua dúvida?','textarea',{maxLength:4000})],form=formFields(fields),send=el('button','Enviar pergunta');send.type='submit';form.append(send);host.append(statusText,log,form);let allowed=false;
   function update(s){allowed=s.possuiAcesso&&!s.limiteAtingido;send.disabled=!allowed;statusText.textContent=`${s.mensagem||''} ${s.possuiAcesso?(s.restantesHoje==null?'Sem limite diário do plano.':`${s.restantesHoje} mensagem(ns) restante(s) hoje.`):''}`;}
-  function messages(){list(log,state.tutorHistory,m=>el('div',`${m.role}: ${m.text}`,`chat-message${m.role==='Você'?' own':''}`),'Sua conversa de estudos começa aqui.');}
+  state.tutorStream?.abort();
+  const messageNodes=new WeakMap();
+  function messages(){list(log,state.tutorHistory,m=>{
+    const bubble=el('div',null,`chat-message tutor-message${m.role==='Você'?' own':''}`);
+    bubble.append(el('strong',m.role,'tutor-author'));
+    const body=el('div',null,'tutor-body');
+    if(m.role==='Você')body.textContent=m.text;
+    else TutorClassText.render(body,m.text);
+    bubble.append(body);
+    if(m.pending)bubble.append(el('small',m.text?'Recebendo resposta…':'A TutorIA está preparando a resposta…','tutor-progress'));
+    if(m.interrupted)bubble.append(el('small','Resposta incompleta. Atualize o status antes de tentar novamente.','tutor-interrupted'));
+    messageNodes.set(m,bubble);
+    return bubble;
+  },'Sua conversa de estudos começa aqui.');}
   update(status);messages();if(!allowed)host.append(link('Conhecer os planos →','#app/planos'));
-  form.addEventListener('submit',async e=>{e.preventDefault();if(!allowed||send.disabled)return;await run(send,async()=>{const mensagem=form.elements.mensagem.value.trim();if(!mensagem)throw new Error('Escreva sua dúvida antes de enviar.');const response=await mutate('/api/tutoria/chat',{mensagem});update(response);if(response.motivo||!response.resposta)throw new Error(response.mensagem||'A TutorIA não conseguiu responder agora.');state.tutorHistory.push({role:'Você',text:mensagem},{role:'TutorIA',text:response.resposta});messages();form.reset();log.scrollTop=log.scrollHeight;});send.disabled=!allowed;});
+  const refresh=button('Atualizar status',async()=>{update(await get('/api/tutoria/status'));refresh.hidden=true;});refresh.hidden=true;host.append(refresh);
+  form.addEventListener('submit',async e=>{e.preventDefault();if(!allowed||send.disabled)return;await run(send,async()=>{
+    const mensagem=form.elements.mensagem.value.trim();if(!mensagem)throw new Error('Escreva sua dúvida antes de enviar.');
+    const controller=new AbortController(),epoch=state.epoch;
+    state.tutorStream=controller;
+    const answer={role:'TutorIA',text:'',pending:true};
+    state.tutorHistory.push({role:'Você',text:mensagem},answer);messages();
+    const input=form.elements.mensagem;input.disabled=true;refresh.hidden=true;
+    try{
+      const response=await TutorClassHttp.stream(state.base,'/api/tutoria/chat/stream',{
+        body:{mensagem},token:state.token,signal:controller.signal,onDelta:trecho=>{
+          if(epoch!==state.epoch)throw new DOMException('Sessão alterada.','AbortError');
+          answer.text+=trecho;if(host.isConnected){
+            const bubble=messageNodes.get(answer);
+            TutorClassText.render(bubble.querySelector('.tutor-body'),answer.text);
+            bubble.querySelector('.tutor-progress').textContent='Recebendo resposta…';
+            log.scrollTop=log.scrollHeight;
+          }
+        }});
+      if(epoch!==state.epoch)throw new DOMException('Sessão alterada.','AbortError');
+      update(response);
+      if(response.motivo||!response.resposta)throw new Error(response.mensagem||'A TutorIA não conseguiu responder agora.');
+      answer.text=response.resposta;form.reset();
+    }catch(error){
+      answer.interrupted=true;allowed=false;refresh.hidden=false;
+      if(epoch===state.epoch&&error.status===401){resetSession();location.hash='login';}
+      throw error;
+    }finally{
+      answer.pending=false;input.disabled=false;
+      if(state.tutorStream===controller)state.tutorStream=null;
+      if(epoch===state.epoch&&host.isConnected){messages();log.scrollTop=log.scrollHeight;}
+    }
+  });send.disabled=!allowed;});
 };
 views.gravacoes=async host=>{const data=await get('/api/gravacoes/minhas');host.replaceChildren(text('As gravações desta versão são mídias demonstrativas. O acesso depende do plano Mentoria e da elegibilidade das suas próprias aulas.'));const grid=el('div',null,'cards');list(grid,data,r=>{const c=card(r.titulo,r.descricao);append(c,text(`${r.materia} · ${r.professor}`),text(`Aula: ${when(r.aulaInicio)} · ${Math.round(r.duracaoSegundos/60)} min`));if(r.disponivel)c.append(button('Abrir gravação',()=>showRecording(r)));return c;},'Nenhuma gravação elegível disponível.');host.append(grid);};
 function showRecording(r){const content=modal(r.titulo);append(content,text(r.descricao||'Gravação demonstrativa vinculada à sua aula.'),details({'Professor':r.professor,'Matéria':r.materia,'Aula':when(r.aulaInicio),'Duração':`${Math.round(r.duracaoSegundos/60)} minutos`}));if(r.disponivel)content.append(safeLink('Assistir à gravação externa ↗',r.urlVideo));else content.append(text('Gravação indisponível.'));}

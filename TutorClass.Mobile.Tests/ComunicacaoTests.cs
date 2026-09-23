@@ -24,7 +24,7 @@ public sealed class ComunicacaoTests
             Assert.Equal("Bearer", req.Headers.Authorization?.Scheme);
             Assert.Equal("token", req.Headers.Authorization?.Parameter);
             if (req.Method == HttpMethod.Get) return Json(Status());
-            Assert.Equal("/api/tutoria/chat", req.RequestUri!.AbsolutePath);
+            Assert.Equal("/api/tutoria/chat/stream", req.RequestUri!.AbsolutePath);
             using var json = JsonDocument.Parse(await req.Content!.ReadAsStringAsync());
             Assert.Single(json.RootElement.EnumerateObject());
             Assert.Equal("Explique classes", json.RootElement.GetProperty("mensagem").GetString());
@@ -237,7 +237,17 @@ public sealed class ComunicacaoTests
 
     private sealed class Handler(Func<HttpRequestMessage, Task<HttpResponseMessage>> handler) : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) => handler(request);
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var response = await handler(request);
+            if (request.RequestUri!.AbsolutePath == "/api/tutoria/chat/stream" && response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync(ct);
+                response.Content.Dispose();
+                response.Content = new StringContent($"event: complete\ndata: {json}\n\n", System.Text.Encoding.UTF8, "text/event-stream");
+            }
+            return response;
+        }
     }
 }
 

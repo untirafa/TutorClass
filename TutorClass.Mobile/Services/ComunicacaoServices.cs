@@ -8,6 +8,8 @@ public sealed class TutorIaService(SessionService session)
         => session.GetAuthenticatedAsync<TutorIaResponse>("api/tutoria/status", ct);
     public Task<TutorIaResponse> EnviarAsync(string mensagem, CancellationToken ct = default)
         => session.PostAuthenticatedAsync<TutorIaResponse>("api/tutoria/chat", new TutorIaChatRequest(mensagem), ct);
+    public Task<TutorIaResponse> EnviarProgressivamenteAsync(string mensagem, Action<string> receberTexto, CancellationToken ct = default)
+        => session.PostStreamAuthenticatedAsync<TutorIaResponse>("api/tutoria/chat/stream", new TutorIaChatRequest(mensagem), receberTexto, ct);
 }
 
 public sealed class NotificacaoService(SessionService session)

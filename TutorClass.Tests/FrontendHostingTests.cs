@@ -17,6 +17,7 @@ public sealed class FrontendHostingTests
     [InlineData("/config.js","text/javascript")]
     [InlineData("/api.js","text/javascript")]
     [InlineData("/app.js","text/javascript")]
+    [InlineData("/tutor-text.js","text/javascript")]
     public async Task Production_entrega_arquivos_publicos(string path, string mediaType)
     {
         await using var factory = new TutorClassApiFactory(environmentName: "Production");

@@ -47,13 +47,24 @@ public sealed class TutorIaViewModel(TutorIaService service, IAppNavigation navi
             Status = null;
             Refresh();
             Mensagens.Add(new("Você", pergunta));
-            var result = await service.EnviarAsync(pergunta, ct);
-            Status = result;
-            if (!string.IsNullOrWhiteSpace(result.Resposta))
+            MensagemIaItem? resposta = null;
+            try
             {
-                Mensagens.Add(new(result.Nome, result.Resposta));
-                Mensagem = "";
+                var result = await service.EnviarProgressivamenteAsync(pergunta, trecho =>
+                {
+                    if (resposta is null) { resposta = new("TutorIA", ""); Mensagens.Add(resposta); }
+                    resposta.Atualizar(resposta.Texto + trecho);
+                }, ct);
+                Status = result;
+                if (!string.IsNullOrWhiteSpace(result.Resposta) && result.Motivo is null)
+                {
+                    if (resposta is null) { resposta = new(result.Nome, result.Resposta); Mensagens.Add(resposta); }
+                    else resposta.Atualizar(result.Resposta);
+                    Mensagem = "";
+                }
+                else resposta?.Atualizar(resposta.Texto, interrompida: true);
             }
+            catch { resposta?.Atualizar(resposta.Texto, interrompida: true); throw; }
         }, ct, "a TutorIA. Atualize o status antes de tentar novamente");
     }
 }

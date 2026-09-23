@@ -116,7 +116,7 @@ public sealed class GeminiResilienciaTests
     }
 
     private static GeminiTutorIaProvider Provider(HttpClient http, bool fallback = false, CaptureLogger? log = null) =>
-        new(http, new() { ApiKey = "fake", Model = "fake" }, log ?? new(), new() { FallbackApresentacao = fallback }, new TutorIaSimuladaProvider());
+        new(http, new() { ApiKey = "fake", Model = "fake", FallbackModel = "" }, log ?? new(), new() { FallbackApresentacao = fallback }, new TutorIaSimuladaProvider());
     private static TutorIaProviderRequest Request() => new(Guid.NewGuid(), PlanoAluno.Foco, "oi", default, new());
     private static TutorClassDbContext Db() => new(new DbContextOptionsBuilder<TutorClassDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
     private static Aluno Seed(TutorClassDbContext db)

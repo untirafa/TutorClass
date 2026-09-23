@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 using TutorClass.Mobile.Models;
 
 namespace TutorClass.Mobile.Services;
@@ -67,6 +69,49 @@ public sealed class SessionService(HttpClient http, ITokenStore tokens)
 
     public Task<T> PostAuthenticatedAsync<T>(string path, object? body = null, CancellationToken ct = default)
         => SendAuthenticatedAsync<T>(HttpMethod.Post, path, body, ct);
+
+    public async Task<T> PostStreamAuthenticatedAsync<T>(string path, object body,
+        Action<string> receberTexto, CancellationToken ct = default)
+    {
+        var token = await tokens.ReadAsync();
+        if (string.IsNullOrWhiteSpace(token)) { Logout(); throw new UnauthorizedAccessException(); }
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(125));
+        using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent.Create(body) };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+        if (response.StatusCode == HttpStatusCode.Unauthorized) { Logout(); throw new UnauthorizedAccessException(); }
+        response.EnsureSuccessStatusCode();
+        if (response.Content.Headers.ContentType?.MediaType != "text/event-stream")
+            throw new HttpRequestException("Resposta progressiva inválida.");
+        using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
+        using var reader = new StreamReader(stream, new UTF8Encoding(false, true));
+        var data = new StringBuilder();
+        var evento = "";
+        var recebidos = 0;
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        while (await reader.ReadLineAsync(timeout.Token) is { } line)
+        {
+            recebidos += line.Length;
+            if (recebidos > 2 * 1024 * 1024) throw new HttpRequestException("Resposta muito grande.");
+            if (line.Length == 0)
+            {
+                if (data.Length > 0)
+                {
+                    using var json = JsonDocument.Parse(data.ToString());
+                    if (evento == "delta") receberTexto(json.RootElement.GetProperty("text").GetString()!);
+                    else if (evento == "complete") return json.RootElement.Deserialize<T>(options)
+                        ?? throw new HttpRequestException("Resposta inválida.");
+                    else if (evento == "error") throw new HttpRequestException("A resposta foi interrompida.");
+                }
+                data.Clear(); evento = "";
+            }
+            else if (line.StartsWith("event:", StringComparison.Ordinal)) evento = line[6..].Trim();
+            else if (line.StartsWith("data:", StringComparison.Ordinal)) data.AppendLine(line[5..].TrimStart(' '));
+        }
+        throw new HttpRequestException("A resposta foi interrompida. Atualize o status antes de tentar novamente.");
+    }
 
     private async Task<T> SendAuthenticatedAsync<T>(HttpMethod method, string path, object? body, CancellationToken ct)
     {

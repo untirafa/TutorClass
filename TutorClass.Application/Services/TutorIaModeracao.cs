@@ -16,7 +16,7 @@ public static partial class TutorIaModeracao
     public const string FalhaTecnica = "ERRO_MODERACAO";
     public const string Aviso = "Essa mensagem contém uma ofensa direta. Reformule sua pergunta com respeito para continuar. Nenhuma mensagem da sua quota foi consumida.";
     [GeneratedRegex(
-        @"^(?:(?:voce|vc|tu|tutoria)(?: e| eh| es)?\s+)?(?:(?:seu|sua|um|uma)\s+)?(?:idiota|imbecil|burro|burra|otario|otaria|inutil|estupido|estupida|filho da puta|filha da puta)$|^(?:vai|va) (?:se foder|tomar no cu)$",
+        @"^(?:(?:voce|vc|tu|tutoria)(?: e| eh| es)?\s+)?(?:(?:seu|sua|um|uma)\s+)?(?:idiota|imbecil|burro|burra|otario|otaria|inutil|estupido|estupida|vagabundo|vagabunda|filho da puta|filha da puta)$|^(?:vai|va) (?:se f[ou]der|tomar no cu)$",
         RegexOptions.CultureInvariant, 100)]
     private static partial Regex Ofensa();
 
@@ -32,7 +32,7 @@ public static partial class TutorIaModeracao
         var text = string.Join(" ", normalized.ToString().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('!', '.', '?').Trim();
         if (PossuiDadosPessoais(text))
             return new(DadosPessoais, "Sua mensagem parece conter informações pessoais. Remova esses dados e envie sua pergunta novamente. Você não precisa compartilhar documentos ou números pessoais para estudar com a TutorIA.");
-        if (Match(text, @"^(?:eu )?(?:vou|irei) (?:te matar|matar voce|te agredir|te espancar|matar (?:o|a|meu|minha) (?:professor|professora|colega)|te perseguir|divulgar suas fotos intimas)(?: hoje| amanha| depois da aula)?$") ||
+        if (Match(text, @"^(?:eu )?(?:vou|irei) (?:te bater|bater (?:em voce|em vc|em ti|no meu colega|na minha colega)|te matar|matar voce|te agredir|te espancar|matar (?:o|a|meu|minha) (?:professor|professora|colega)|te perseguir|divulgar suas fotos intimas)(?: hoje| amanha| depois da aula)?$") ||
             Match(text, @"^(?:me ajude a|quero) (?:ameacar|assediar|chantagear|humilhar) (?:meu|minha|o|a) (?:colega|professor|professora|aluno|aluna)(?:\s.*)?$"))
             return new(Ameaca, "Esta mensagem não pôde ser enviada porque pode violar as regras de segurança do TutorClass. Reformule sua mensagem com respeito e segurança.");
         if (Match(text, @"^(?:ignore|desconsidere) (?:todas )?(?:as )?(?:regras|restricoes|instrucoes)(?:\s.*)?$") ||

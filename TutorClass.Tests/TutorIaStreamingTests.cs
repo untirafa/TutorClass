@@ -119,6 +119,18 @@ public sealed class TutorIaStreamingTests
         var invalid = await client.PostAsJsonAsync("/api/tutoria/chat/stream", new { mensagem=new string('x',4001) });
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
         Assert.Equal("application/json", invalid.Content.Headers.ContentType!.MediaType);
+        foreach (var path in new[] { "/api/tutoria/chat", "/api/tutoria/chat/stream" })
+        {
+            foreach (var (message, category) in new[] { ("11 99999-9999", "DADOS_PESSOAIS"), ("Eu irei te agredir", "AMEACA_OU_ASSEDIO") })
+            {
+                var moderated = await client.PostAsJsonAsync(path, new { mensagem = message });
+                Assert.Equal(HttpStatusCode.OK, moderated.StatusCode);
+                var body = await moderated.Content.ReadAsStringAsync();
+                Assert.Contains(category, body); Assert.DoesNotContain("event: delta", body);
+                Assert.Contains("\"usadasHoje\":0", body);
+                Assert.DoesNotContain(message, body);
+            }
+        }
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/tutoria/chat/stream") { Content = JsonContent.Create(new { mensagem="oi" }) };
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         Assert.Equal("text/event-stream", response.Content.Headers.ContentType!.MediaType);

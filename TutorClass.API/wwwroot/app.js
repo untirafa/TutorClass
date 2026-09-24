@@ -261,14 +261,18 @@ views.tutoria=async host=>{const status=await get('/api/tutoria/status');host.re
         }});
       if(epoch!==state.epoch)throw new DOMException('Sessão alterada.','AbortError');
       update(response);
-      if(response.motivo==='MENSAGEM_OFENSIVA'){
+      if(['MENSAGEM_OFENSIVA','DADOS_PESSOAIS','AMEACA_OU_ASSEDIO','TENTATIVA_ACESSO_INDEVIDO','ERRO_MODERACAO'].includes(response.motivo)){
         state.tutorHistory.splice(state.tutorHistory.indexOf(answer),1);
-        notice(response.mensagem,true);return;
+        statusText.textContent=`TutorClass: ${response.mensagem}`;
+        notice(statusText.textContent,true);return;
       }
       if(response.motivo||!response.resposta)throw new Error(response.mensagem||'A TutorIA não conseguiu responder agora.');
       answer.text=response.resposta;form.reset();
     }catch(error){
-      answer.interrupted=true;allowed=false;refresh.hidden=false;
+      if(answer.text.trim())answer.interrupted=true;
+      else state.tutorHistory.splice(state.tutorHistory.indexOf(answer),1);
+      statusText.textContent=`TutorClass: ${error.message}`;
+      allowed=false;refresh.hidden=false;
       if(epoch===state.epoch&&error.status===401){resetSession();location.hash='login';}
       throw error;
     }finally{

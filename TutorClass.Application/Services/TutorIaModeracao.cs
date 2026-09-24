@@ -6,17 +6,19 @@ namespace TutorClass.Application.Services;
 
 // Conservative local rules: match a whole abusive utterance, not isolated keywords
 // inside a lesson, quotation, report of bullying or request for help.
-public static class TutorIaModeracao
+public static partial class TutorIaModeracao
 {
     public sealed record Resultado(string Categoria, string Mensagem);
     public const string DadosPessoais = "DADOS_PESSOAIS";
     public const string Ameaca = "AMEACA_OU_ASSEDIO";
     public const string AcessoIndevido = "TENTATIVA_ACESSO_INDEVIDO";
     public const string Motivo = "MENSAGEM_OFENSIVA";
+    public const string FalhaTecnica = "ERRO_MODERACAO";
     public const string Aviso = "Essa mensagem contém uma ofensa direta. Reformule sua pergunta com respeito para continuar. Nenhuma mensagem da sua quota foi consumida.";
-    private static readonly Regex Ofensa = new(
+    [GeneratedRegex(
         @"^(?:(?:voce|vc|tu|tutoria)(?: e| eh| es)?\s+)?(?:(?:seu|sua|um|uma)\s+)?(?:idiota|imbecil|burro|burra|otario|otaria|inutil|estupido|estupida|filho da puta|filha da puta)$|^(?:vai|va) (?:se foder|tomar no cu)$",
-        RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(100));
+        RegexOptions.CultureInvariant, 100)]
+    private static partial Regex Ofensa();
 
     public static bool DeveBloquear(string mensagem)
         => Avaliar(mensagem) is not null;
@@ -27,31 +29,31 @@ public static class TutorIaModeracao
         foreach (var c in mensagem.ToLowerInvariant().Normalize(NormalizationForm.FormD))
             if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
                 normalized.Append(c);
-        var text = Regex.Replace(normalized.ToString(), @"\s+", " ").Trim().TrimEnd('!', '.', '?').Trim();
+        var text = string.Join(" ", normalized.ToString().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('!', '.', '?').Trim();
         if (PossuiDadosPessoais(text))
             return new(DadosPessoais, "Sua mensagem parece conter informações pessoais. Remova esses dados e envie sua pergunta novamente. Você não precisa compartilhar documentos ou números pessoais para estudar com a TutorIA.");
-        if (Match(text, @"^(?:eu )?vou (?:te matar|matar voce|matar (?:o|a|meu|minha) (?:professor|professora|colega)|te perseguir|divulgar suas fotos intimas)(?: hoje| amanha| depois da aula)?$") ||
+        if (Match(text, @"^(?:eu )?(?:vou|irei) (?:te matar|matar voce|te agredir|te espancar|matar (?:o|a|meu|minha) (?:professor|professora|colega)|te perseguir|divulgar suas fotos intimas)(?: hoje| amanha| depois da aula)?$") ||
             Match(text, @"^(?:me ajude a|quero) (?:ameacar|assediar|chantagear|humilhar) (?:meu|minha|o|a) (?:colega|professor|professora|aluno|aluna)(?:\s.*)?$"))
             return new(Ameaca, "Esta mensagem não pôde ser enviada porque pode violar as regras de segurança do TutorClass. Reformule sua mensagem com respeito e segurança.");
         if (Match(text, @"^(?:ignore|desconsidere) (?:todas )?(?:as )?(?:regras|restricoes|instrucoes)(?:\s.*)?$") ||
             Match(text, @"^(?:me (?:ensine|ajude) a|quero|como (?:posso )?)\s*(?:burlar (?:a cota|o limite|as restricoes)|invadir (?:a conta|o sistema)|acessar (?:a conta|as conversas) de outr[ao])(?:\s.*)?$"))
             return new(AcessoIndevido, "Não posso atender a essa solicitação. Reformule sua mensagem dentro das funcionalidades e das regras de uso da TutorIA.");
         // A word alone can be a vocabulary prompt. Require a directed expression.
-        if ((text.Contains(' ') && Ofensa.IsMatch(text)) ||
+        if ((text.Contains(' ') && Ofensa().IsMatch(text)) ||
             Match(text, @"^(?:meu|minha|o|a) (?:professor|professora|colega|aluno|aluna) e (?:um |uma )?(?:idiota|imbecil|burro|burra|inutil)$"))
             return new(Motivo, "Vamos manter uma comunicação respeitosa. Reformule sua mensagem para que eu possa ajudar com seus estudos. Nenhuma mensagem da sua quota foi consumida.");
         return null;
     }
 
     private static bool Match(string text, string pattern) => Regex.IsMatch(text, pattern,
-        RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(100));
+        RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
 
     private static bool PossuiDadosPessoais(string text)
     {
-        if (Match(text, @"\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b")) return true;
+        if (Email().IsMatch(text)) return true;
         // CPF: require formatting or an explicit label, plus both check digits.
         foreach (Match m in Regex.Matches(text, @"\b\d{3}\.\d{3}\.\d{3}-\d{2}\b|\bcpf\s*(?:e|eh|:|=)?\s*\d{11}\b",
-                     RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(100)))
+                     RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)))
         {
             var digits = new string(m.Value.Where(char.IsAsciiDigit).ToArray());
             if (CpfValido(digits)) return true;
@@ -59,13 +61,32 @@ public static class TutorIaModeracao
         // RG has regional formats: a label and document-shaped value are required.
         if (Match(text, @"\brg\s*(?:e|eh|:|=|numero)?\s*[0-9][0-9. -]{3,18}[0-9x]\b")) return true;
         foreach (Match m in Regex.Matches(text, @"\b(?:telefone|celular|whatsapp|whats|contato)\s*(?:e|eh|:|=)?\s*(?:\+55\s*)?\(?[1-9][0-9]\)?[ .-]*[2-9][0-9 .-]{7,11}[0-9]\b",
-                     RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(100)))
+                     RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)))
         {
             var digits = new string(m.Value.Where(char.IsAsciiDigit).ToArray());
             if (digits.Length is 10 or 11 || (digits.StartsWith("55") && digits.Length is 12 or 13)) return true;
         }
+        foreach (Match phone in TelefoneFormatado().Matches(text))
+        {
+            // DDD + grouped subscriber number is evidence; bare numeric sequences are not.
+            // A mathematical expression using the same grouping is ambiguous, not a contact.
+            var prefix = text[..phone.Index].TrimEnd();
+            if (prefix.EndsWith("calcule") || prefix.EndsWith("resolva") || prefix.EndsWith("quanto e")) continue;
+            var suffix = text[(phone.Index + phone.Length)..].TrimStart();
+            if (suffix.StartsWith("=") || suffix.StartsWith("+") || suffix.StartsWith("/") || suffix.StartsWith("*") ||
+                suffix.StartsWith("dividido") || suffix.StartsWith("multiplicado")) continue;
+            return true;
+        }
         return Match(text, @"\b(?:minha senha|meu token|minha chave de api|meu passaporte)\s*(?:e|eh|:|=)\s*\S+");
     }
+
+    // Generated bounded patterns avoid the symbolic engine's runtime construction and
+    // unbounded scans of long near-matches. Keep the original timeout as a safety net.
+    [GeneratedRegex(@"\b[a-z0-9._%+-]{1,64}@[a-z0-9.-]{1,253}\.[a-z]{2,24}\b", RegexOptions.CultureInvariant, 100)]
+    private static partial Regex Email();
+
+    [GeneratedRegex(@"(?<![0-9])(?:\+55 )?(?:\((?:[14689][1-9]|2[12478]|3[1-578]|5[1345]|7[134579])\)|(?:[14689][1-9]|2[12478]|3[1-578]|5[1345]|7[134579])) [2-9][0-9]{3,4}-[0-9]{4}(?![0-9])", RegexOptions.CultureInvariant, 100)]
+    private static partial Regex TelefoneFormatado();
 
     private static bool CpfValido(string digits)
     {

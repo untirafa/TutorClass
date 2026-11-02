@@ -99,7 +99,7 @@ async function loadPublicTeachers(){const area=$('public-teachers');empty(area,'
 async function loadPublic(){state.publicLoaded=true;planCards($('landing-plans'));const results=await Promise.allSettled([
   subjects().then(items=>$('public-subject').replaceChildren(new Option('Todas as matérias',''),...items.map(m=>new Option(m.nome,m.id)))),
   loadPublicTeachers(),
-  publicGet('/api/faq').then(items=>list($('public-faq'),items,faqItem,'Nenhuma pergunta cadastrada ainda.'))
+  publicGet('/api/faq').then(items=>list($('public-faq'),items.slice(0,4),faqItem,'Nenhuma pergunta cadastrada ainda.'))
 ]);if(results[0].status==='rejected')$('public-subject').replaceChildren(new Option('Todas as matérias',''));if(results[2].status==='rejected')empty($('public-faq'),'Não foi possível carregar as perguntas. Tente novamente pela conexão no rodapé.');}
 function faqItem(item){const d=el('details');append(d,el('summary',item.pergunta),text(item.resposta,'prewrap'));return d;}
 submit($('public-filter'),loadPublicTeachers);
@@ -136,11 +136,16 @@ $('auth-form').addEventListener('submit',e=>{e.preventDefault();run($('auth-subm
   catch(error){resetSession();throw error;}
   notice('Bem-vindo à sua área.');location.hash='app/inicio';
 },$('auth-feedback'));});
-const menus=[['inicio','Visão geral'],['professores','Encontrar professores','Aluno'],['alunos','Meus alunos','Professor'],['aulas','Minhas aulas','Aluno|Professor'],['materiais','Materiais e atividades','Aluno|Professor'],['mentoria','Mentoria e chat','Aluno|Professor'],['acompanhamentos','Acompanhamentos','Aluno|Professor'],['tutoria','TutorIA','Aluno'],['planos','Planos','Aluno'],['gravacoes','Gravações','Aluno'],['financeiro','Financeiro','Aluno|Professor'],['notificacoes','Notificações'],['profissional','Perfil profissional','Professor'],['disponibilidade','Disponibilidade','Professor'],['analise','Análise de professores','Administrador'],['conta','Minha conta'],['ajuda','Ajuda']];
+const menus=[['inicio','Visão geral','', '⌂'],['professores','Encontrar professores','Aluno','⌕'],['alunos','Meus alunos','Professor','♙'],['aulas','Minhas aulas','Aluno|Professor','▣'],['materiais','Materiais e atividades','Aluno|Professor','▤'],['mentoria','Mentoria e chat','Aluno|Professor','☏'],['acompanhamentos','Acompanhamentos','Aluno|Professor','↗'],['tutoria','TutorIA','Aluno','✦'],['planos','Planos','Aluno','◇'],['gravacoes','Gravações','Aluno','▶'],['financeiro','Financeiro','Aluno|Professor','R$'],['notificacoes','Notificações','','♧'],['profissional','Perfil profissional','Professor','♙'],['disponibilidade','Disponibilidade','Professor','◷'],['analise','Análise de professores','Administrador','▥'],['conta','Minha conta','','⚙'],['ajuda','Ajuda','','?']];
+const shortcutsByRole={
+  Aluno:['professores','aulas','materiais','tutoria'],
+  Professor:['aulas','alunos','materiais','disponibilidade'],
+  Administrador:['analise','notificacoes','ajuda','conta']
+};
 function route(){stopChat();state.tutorStream?.abort();const hash=location.hash.slice(1)||'home';const auth=['login','cadastro-aluno','cadastro-professor'].includes(hash),app=hash.startsWith('app/');if(app&&!state.user){location.hash='login';return;}
   $('landing').hidden=auth||app;$('auth-view').hidden=!auth;$('workspace').hidden=!app;$('footer').hidden=app;document.querySelector('.public-nav').hidden=app;$('account-link').textContent=state.user?'Minha área ↗':'Entrar ↗';$('account-link').href=state.user?'#app/inicio':'#login';
   if(auth){if(hash==='cadastro-professor')$('auth-role').value='Professor';if(hash==='cadastro-aluno')$('auth-role').value='Aluno';renderAuth();window.scrollTo(0,0);}
-  else if(app){$('sidebar-name').textContent=state.user.nome;$('sidebar-role').textContent=state.user.perfil;$('workspace-nav').replaceChildren(...menus.filter(menuAllowed).map(m=>{const a=link(m[1],`#app/${m[0]}`);a.className=hash===`app/${m[0]}`?'active':'';return a;}));renderWorkspace();}
+  else if(app){$('sidebar-name').textContent=state.user.nome;$('sidebar-role').textContent=state.user.perfil;$('workspace-nav').replaceChildren(...menus.filter(menuAllowed).map(m=>{const a=link('',`#app/${m[0]}`);append(a,el('span',m[3],'nav-icon'),el('span',m[1]));a.className=hash===`app/${m[0]}`?'active':'';a.setAttribute('aria-current',hash===`app/${m[0]}`?'page':'false');return a;}));const shortcutIds=shortcutsByRole[state.user.perfil]||[];$('workspace-shortcuts').replaceChildren(...shortcutIds.map(id=>{const m=menus.find(item=>item[0]===id&&menuAllowed(item));const a=link('',`#app/${id}`,'workspace-shortcut');append(a,el('span',m[3],'shortcut-icon'),el('span',m[1]));return a;}));renderWorkspace();}
   else{if(!state.publicLoaded)loadPublic();requestAnimationFrame(()=>$(hash)?.scrollIntoView({block:'start'}));}
 }
 async function renderWorkspace(){if(!state.user)return;const key=location.hash.split('/')[1]||'inicio';const menu=menus.find(m=>m[0]===key&&menuAllowed(m));if(!menu){location.hash='app/inicio';return;}$('workspace-title').textContent=menu[1];$('workspace-eyebrow').textContent=`ÁREA DO ${state.user.perfil.toUpperCase()}`;const host=el('div',null,'stack');$('workspace-content').replaceChildren(host);empty(host,'Carregando…');try{await views[key](host);}catch(e){if(errorText(e))empty(host,e.message,true);}}

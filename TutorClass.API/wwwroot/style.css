@@ -924,7 +924,7 @@ footer {
 }
 
 .stars {
-  color: #a06e2d;
+  color: #2458d3;
   font-size: 16px;
   letter-spacing: 2px;
 }
@@ -964,8 +964,10 @@ footer {
 
 .toast {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  top: 18px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
   z-index: 50;
   max-width: min(520px, 100% - 48px);
   background: var(--ink);
@@ -1412,10 +1414,10 @@ dd {
   --paper: #fffdf9;
   --canvas: #fffdf9;
   --line: #d8d1c5;
-  --lavender: #f7d77b;
+  --lavender: #e5edff;
   --mint: #168a82;
   --peach: #ee7954;
-  --sun: #f7d77b;
+  --sun: #e9f1ff;
   --sky: #a7d2e9;
   --radius: 2px;
   --shadow: 0 16px 45px #3b311719;
@@ -1554,7 +1556,7 @@ button:hover,
 
 .violet { background: var(--sun); color: var(--ink); }
 .green { background: #d7eee9; color: #176e67; }
-.peach { background: #ffe1d4; color: #a9482b; }
+.peach { background: #d6e6ff; color: #17458f; }
 
 .progress-track span { background: var(--peach); }
 
@@ -1591,7 +1593,7 @@ button:hover,
 .subject-strip > div {
   position: relative;
   z-index: 1;
-  background: #f7d77bd9;
+  background: #e9f1ffd9;
 }
 
 .subject-strip span { color: #574c32; }
@@ -1693,12 +1695,9 @@ footer {
 
 .stat-number { color: var(--peach); }
 
-.inline-message {
-  background: #fff0b9;
-  color: var(--ink);
-}
+.inline-message { background: #e5edff; color: var(--ink); }
 
-.chat-message.own { background: #fff0b9; }
+.chat-message.own { background: #e5edff; }
 
 dialog {
   border-color: var(--ink);
@@ -1895,6 +1894,9 @@ dialog::backdrop { background: rgba(12,27,55,.46); }
 .sidebar nav a { gap: 10px; }
 .nav-icon { width: 22px; flex: 0 0 22px; text-align: center; font-size: 16px; font-weight: 700; color: #5b82cf; }
 .sidebar nav a.active .nav-icon { color: #fff; }
+.toast { top: 16px; bottom: auto; right: auto; left: 50%; transform: translateX(-50%); border: 1px solid #d3def0; border-radius: 14px; background: #14284a; box-shadow: 0 12px 35px rgba(14,35,75,.2); }
+.toast.error { background: #8e2934; }
+.nav-icon, .shortcut-icon { display: inline-grid; place-items: center; }
 @media (max-width: 780px) {
   .hero { min-height: 620px; padding: 100px 24px; }
   .hero-copy { width: min(100%, 600px); }

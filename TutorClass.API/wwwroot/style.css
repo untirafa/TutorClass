@@ -1859,15 +1859,15 @@ dialog::backdrop { background: rgba(12,27,55,.46); }
 
 /* Mídia, carrosséis e atalhos adicionados ao fluxo principal. */
 .brand { gap: 10px; }
-.brand-logo { display: block; width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #05080e; }
+.brand-logo { display: block; width: 56px; height: 42px; border-radius: 8px; object-fit: contain; background: #fff; }
 .hero-art { background: #111c31; }
-.hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.hero-photo { display: none; }
+.hero-video { display: none; }
+.hero-photo { position: absolute; z-index: 0; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 48%; }
 .hero { position: relative; display: block; width: 100%; max-width: none; min-height: min(720px, calc(100vh - 78px)); padding: clamp(90px,12vh,150px) max(32px, calc((100vw - 1480px)/2)); overflow: hidden; isolation: isolate; background: #eef3fb; }
 .hero-copy { position: relative; z-index: 2; width: min(55%, 760px); padding: 0; }
 .hero-art { position: absolute; z-index: -1; inset: 0; display: block; width: 100%; height: 100%; min-height: 0; border: 0; border-radius: 0; box-shadow: none; background: #263958; }
 .hero-art::after { z-index: 1; background: linear-gradient(90deg,rgba(248,250,255,.90) 0%,rgba(248,250,255,.82) 31%,rgba(242,246,253,.56) 48%,rgba(224,233,247,.16) 66%,rgba(10,24,48,.28) 100%); }
-.hero-video { z-index: 0; }
+.hero-photo { z-index: 0; }
 .hero-copy .eyebrow, .hero-copy h1, .hero-copy p, .hero-note { text-shadow: 0 1px 12px rgba(255,255,255,.55); }
 .word-carousel { display: flex; width: max-content; min-width: 100%; align-items: center; justify-content: flex-start; gap: 28px; overflow: hidden; padding: 15px max(32px, calc((100% - 1180px)/2)); white-space: nowrap; color: #fff; background: var(--primary); animation: word-carousel-slide 36s linear infinite; }
 .word-carousel:hover { animation-play-state: paused; }
@@ -1899,7 +1899,7 @@ dialog::backdrop { background: rgba(12,27,55,.46); }
   .hero { min-height: 620px; padding: 100px 24px; }
   .hero-copy { width: min(100%, 600px); }
   .hero-art::after { background: linear-gradient(90deg,rgba(248,250,255,.88),rgba(248,250,255,.70) 58%,rgba(10,24,48,.18)); }
-  .hero-video { object-position: center; }
+  .hero-photo { object-position: 62% center; }
   .auth-intro { min-height: 320px; }
   .workspace-shortcuts { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-bottom: 20px; }
   .workspace-shortcut { padding: 10px; font-size: 12px; }
@@ -1908,7 +1908,7 @@ dialog::backdrop { background: rgba(12,27,55,.46); }
   .teacher-cta { margin-block: 46px; padding: 28px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hero-video, .auth-video { display: none; }
+  .auth-video { display: none; }
   .word-carousel { animation: none; }
   .hero-art { background: linear-gradient(145deg,#dbe8ff,#9ec0ff); }
   .auth-intro { background: linear-gradient(145deg,#183871,#0d1c39); }

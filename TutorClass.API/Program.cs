@@ -130,6 +130,7 @@ if (useLocalDatabase)
     app.Logger.LogInformation("Desenvolvimento: banco SQLite local em .local/tutorclass.db. As contas persistem ao reiniciar a API.");
 }
 
+app.UseMiddleware<TutorIaPerformanceMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.MapOpenApi();

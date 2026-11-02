@@ -1,4 +1,7 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using TutorClass.Application.Abstractions;
 using TutorClass.Application.DTOs;
 using TutorClass.Domain.Common;
@@ -15,9 +18,11 @@ public sealed class TutorIaService
     private readonly ITutorIaProvider _provider;
     private readonly IContextoIaService _contexto;
     private readonly TutorIaMemoria _memoria;
+    private readonly ILogger<TutorIaService> _logger;
 
-    public TutorIaService(IApplicationDbContext db, ITutorIaProvider provider, IContextoIaService? contexto = null, TutorIaMemoria? memoria = null)
+    public TutorIaService(IApplicationDbContext db, ITutorIaProvider provider, IContextoIaService? contexto = null, TutorIaMemoria? memoria = null, ILogger<TutorIaService>? logger = null)
     {
+        _logger = logger ?? NullLogger<TutorIaService>.Instance;
         _db = db;
         _provider = provider;
         _contexto = contexto ?? new ContextoIaService(db);
@@ -36,13 +41,17 @@ public sealed class TutorIaService
     public async Task<TutorIaChatResponse> ConversarAsync(Guid alunoId, TutorIaChatRequest request,
         Func<string, CancellationToken, Task>? receberTexto, CancellationToken cancellationToken)
     {
+        using var total = Medir("ProcessamentoTotal");
         EnsureAlunoAtivo(alunoId);
 
         var alunoLock = AlunoLocks.GetOrAdd(alunoId, _ => new SemaphoreSlim(1, 1));
-        await alunoLock.WaitAsync(cancellationToken);
+        using (Medir("EsperaTrava"))
+            await alunoLock.WaitAsync(cancellationToken);
         try
         {
-            var statusAntes = BuildStatus(alunoId);
+            TutorIaStatusResponse statusAntes;
+            using (Medir("PlanoCota"))
+                statusAntes = BuildStatus(alunoId);
             if (!statusAntes.PossuiAcesso)
             {
                 return Bloqueado(statusAntes);
@@ -54,15 +63,18 @@ public sealed class TutorIaService
                 throw new DomainException("Mensagem para a TutorIA deve possuir no maximo 4000 caracteres.");
 
             TutorIaModeracao.Resultado? moderacao;
-            try
+            using (Medir("Moderacao"))
             {
-                moderacao = TutorIaModeracao.Avaliar(request.Mensagem);
-            }
-            catch (Exception ex) when (ex is System.Text.RegularExpressions.RegexMatchTimeoutException or ArgumentException)
-            {
-                // Fail closed without recording the input or calling the external provider.
-                moderacao = new(TutorIaModeracao.FalhaTecnica,
-                    "Não foi possível validar sua mensagem com segurança. Tente novamente em instantes. Nenhuma mensagem da sua cota foi consumida.");
+                try
+                {
+                    moderacao = TutorIaModeracao.Avaliar(request.Mensagem);
+                }
+                catch (Exception ex) when (ex is System.Text.RegularExpressions.RegexMatchTimeoutException or ArgumentException)
+                {
+                    // Fail closed without recording the input or calling the external provider.
+                    moderacao = new(TutorIaModeracao.FalhaTecnica,
+                        "Não foi possível validar sua mensagem com segurança. Tente novamente em instantes. Nenhuma mensagem da sua cota foi consumida.");
+                }
             }
             if (moderacao is not null)
                 return new TutorIaChatResponse(TutorIaPrompts.Nome, statusAntes.PossuiAcesso,
@@ -70,11 +82,15 @@ public sealed class TutorIaService
                     statusAntes.LimiteDiario, statusAntes.UsadasHoje, statusAntes.RestantesHoje,
                     statusAntes.LimiteAtingido, false, false);
 
-            var contexto = await _contexto.ObterContextoAsync(alunoId, cancellationToken);
+            ContextoIaAluno contexto;
+            using (Medir("ConsultaContexto"))
+                contexto = await _contexto.ObterContextoAsync(alunoId, cancellationToken);
             string resposta;
             try
             {
-                var pergunta = new TutorIaProviderRequest(alunoId, statusAntes.Plano, request.Mensagem.Trim(),
+                TutorIaProviderRequest pergunta;
+                using (Medir("MontagemContexto"))
+                    pergunta = new TutorIaProviderRequest(alunoId, statusAntes.Plano, request.Mensagem.Trim(),
                     GetHojeBrasil(), contexto, _memoria.Obter(alunoId));
                 resposta = receberTexto is null
                     ? await _provider.ResponderAsync(pergunta, cancellationToken)
@@ -123,6 +139,16 @@ public sealed class TutorIaService
         {
             alunoLock.Release();
         }
+    }
+
+    private IDisposable Medir(string etapa) => new Medicao(_logger, etapa);
+
+    private sealed class Medicao(ILogger logger, string etapa) : IDisposable
+    {
+        private readonly long _inicio = Stopwatch.GetTimestamp();
+        public void Dispose() => logger.LogInformation(
+            "TutorIA Performance Stage={Stage} DurationMs={DurationMs}",
+            etapa, Stopwatch.GetElapsedTime(_inicio).TotalMilliseconds);
     }
 
     private TutorIaStatusResponse BuildStatus(Guid alunoId)

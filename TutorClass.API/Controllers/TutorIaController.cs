@@ -1,3 +1,4 @@
+using TutorClass.API.Middleware;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http.Features;
@@ -36,6 +37,7 @@ public sealed class TutorIaController : ControllerBase
     [ProducesResponseType(typeof(TutorIaChatResponse), StatusCodes.Status200OK)]
     public async Task<TutorIaChatResponse> Chat(TutorIaChatRequest request, CancellationToken cancellationToken)
     {
+        TutorIaPerformanceMiddleware.MarcarInicio(HttpContext);
         return await _service.ConversarAsync(User.GetUserId(), request, cancellationToken);
     }
 
@@ -44,6 +46,7 @@ public sealed class TutorIaController : ControllerBase
     [Produces("text/event-stream")]
     public async Task Stream(TutorIaChatRequest request, CancellationToken cancellationToken)
     {
+        TutorIaPerformanceMiddleware.MarcarInicio(HttpContext);
         async Task Emitir(string evento, object dados, CancellationToken ct)
         {
             if (!Response.HasStarted)

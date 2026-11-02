@@ -23,8 +23,19 @@ namespace TutorClass.Tests;
 
 public sealed class MentoriaChatTests
 {
-    [Fact]
-    public async Task SignalR_websocket_retorna_falha_identificavel_na_invocacao()
+    [Theory]
+    [MemberData(nameof(ModeracaoCorpus.ChatBloqueadas), MemberType = typeof(ModeracaoCorpus))]
+    public Task Familias_bloqueadas_sem_persistencia(string texto, string categoria)
+        => Moderacao_direta_bloqueia_ambos_participantes_antes_do_store(texto, categoria);
+    [Theory]
+    [MemberData(nameof(ModeracaoCorpus.Legitimas), MemberType = typeof(ModeracaoCorpus))]
+    public Task Familias_legitimas_preservam_conteudo(string texto)
+        => Moderacao_preserva_mensagens_legitimas_e_texto_original(texto);
+
+    [Theory]
+    [InlineData("Você é uma idiota")]
+    [InlineData(@"sua p\@ta")]
+    public async Task SignalR_websocket_retorna_falha_identificavel_na_invocacao(string texto)
     {
         var store = new InMemoryChatStore();
         await using var factory = new TutorClassApiFactory(services =>
@@ -53,7 +64,7 @@ public sealed class MentoriaChatTests
         await Send("{\"protocol\":\"json\",\"version\":1}");
         Assert.Contains("{}",await Receive());
         await Send(System.Text.Json.JsonSerializer.Serialize(new
-        { type=1, invocationId="blocked", target="EnviarMensagem", arguments=new object[]{scenario.VinculoId,"Você é uma idiota"} }));
+        { type=1, invocationId="blocked", target="EnviarMensagem", arguments=new object[]{scenario.VinculoId,texto} }));
         var wire=await Receive();
         using var completion=System.Text.Json.JsonDocument.Parse(wire.Split('\u001e')[0]);
         Assert.Equal(3,completion.RootElement.GetProperty("type").GetInt32());
@@ -139,8 +150,10 @@ public sealed class MentoriaChatTests
         Assert.Single(proxy.Invocations); Assert.Single(store.Messages); Assert.Equal(scenario.AlunoId,saved.RemetenteUsuarioId);
     }
 
-    [Fact]
-    public async Task Http_bloqueia_sem_persistir_ou_publicar_e_preserva_sucesso()
+    [Theory]
+    [InlineData("Vou te matar", "AMEACA_EXPLICITA")]
+    [InlineData("sua p@ta", "OFENSA_DIRECIONADA")]
+    public async Task Http_bloqueia_sem_persistir_ou_publicar_e_preserva_sucesso(string texto, string categoria)
     {
         var store = new InMemoryChatStore(); var proxy = new FakeClientProxy();
         await using var factory = new TutorClassApiFactory(services =>
@@ -151,11 +164,11 @@ public sealed class MentoriaChatTests
         var client = factory.CreateClient(); var scenario = await SeedHttpScenarioAsync(factory);
         await AuthorizeAsync(client,"aluno.http.chat@teste.local","TutorClass@123");
         var path=$"/api/mentorias/{scenario.VinculoId}/chat/mensagens";
-        var response=await client.PostAsJsonAsync(path,new EnviarMensagemMentoriaRequest("Vou te matar"));
+        var response=await client.PostAsJsonAsync(path,new EnviarMensagemMentoriaRequest(texto));
         Assert.Equal(System.Net.HttpStatusCode.BadRequest,response.StatusCode);
         using var body=System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("MENSAGEM_BLOQUEADA",body.RootElement.GetProperty("codigo").GetString());
-        Assert.Equal("AMEACA_EXPLICITA",body.RootElement.GetProperty("categoria").GetString());
+        Assert.Equal(categoria,body.RootElement.GetProperty("categoria").GetString());
         Assert.Contains("Mensagem não enviada",body.RootElement.GetProperty("error").GetString());
         Assert.DoesNotContain("Vou te matar",body.RootElement.ToString());
         Assert.Empty(proxy.Invocations); Assert.Empty(store.Messages); Assert.Equal(0,store.OpenCalls); Assert.Equal(0,store.SaveCalls);

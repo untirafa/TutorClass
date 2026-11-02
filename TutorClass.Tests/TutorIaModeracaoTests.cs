@@ -11,6 +11,25 @@ namespace TutorClass.Tests;
 public class TutorIaModeracaoTests
 {
     [Theory]
+    [MemberData(nameof(ModeracaoCorpus.IaBloqueadas), MemberType = typeof(ModeracaoCorpus))]
+    public Task Familias_bloqueadas_sem_provider_ou_quota(string texto, string categoria)
+        => Bloqueia_sem_provider_quota_ou_memoria_e_permite_reformular(texto, categoria);
+    [Theory]
+    [MemberData(nameof(ModeracaoCorpus.Legitimas), MemberType = typeof(ModeracaoCorpus))]
+    public async Task Familias_legitimas_permitidas(string texto)
+    {
+        Preserva_estudo_critica_citacoes_e_pedidos_de_ajuda(texto);
+        await using var db = new TutorClassDbContext(new DbContextOptionsBuilder<TutorClassDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var aluno = new Aluno("Teste", "legitimo@example.test", "hash");
+        db.Add(aluno); db.Add(new AssinaturaAluno(aluno.Id, aluno.Id, PlanoAluno.Foco, 30, 20, true));
+        await db.SaveChangesAsync();
+        var provider = new Provider();
+        var response = await new TutorIaService(db, provider).ConversarAsync(aluno.Id, new(texto), default);
+        Assert.Null(response.Motivo); Assert.Equal(1, provider.Calls); Assert.Equal(1, response.UsadasHoje);
+    }
+
+    [Theory]
     [InlineData("Você é um idiota!!!", "MENSAGEM_OFENSIVA")]
     [InlineData("SUA IMBECIL!", "MENSAGEM_OFENSIVA")]
     [InlineData("vai se foder", "MENSAGEM_OFENSIVA")]

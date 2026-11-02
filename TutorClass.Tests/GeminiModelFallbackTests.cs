@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using TutorClass.Application.DTOs;
 using TutorClass.Domain.Plans;
@@ -59,6 +60,29 @@ public class GeminiModelFallbackTests
             (chunk, _) => { text += chunk; return Task.CompletedTask; }, default));
         Assert.Equal("Resposta real", text);
         Assert.Single(handler.Paths);
+    }
+
+    [Theory]
+    [InlineData(0, "timeout")]
+    [InlineData(503, "servidor_provider")]
+    public async Task Medicoes_de_tentativas_e_primeiro_texto_sem_conteudo(int status, string category)
+    {
+        using var http = new HttpClient(new Handler(status));
+        var log = new PerformanceLog<GeminiTutorIaProvider>();
+        var provider = new GeminiTutorIaProvider(http,
+            new() { ApiKey = "segredo-simulado", Model = "primary", FirstTextTimeoutSeconds = 1 }, log);
+        await provider.ResponderProgressivamenteAsync(Request(), (_, _) => Task.CompletedTask, default);
+        var attempts = log.Entries.Where(x => x.ContainsKey("FirstTextMs")).ToArray();
+        Assert.Equal(2, attempts.Length);
+        Assert.Equal(category, attempts[0]["Category"]);
+        Assert.Null(attempts[0]["FirstTextMs"]);
+        Assert.True((double)attempts[1]["FirstTextMs"]! >= 0);
+        Assert.Equal("sucesso", attempts[1]["Category"]);
+        Assert.Equal("primary", attempts[0]["Model"]);
+        Assert.Equal("gemini-3.1-flash-lite", attempts[1]["Model"]);
+        Assert.Contains(log.Entries, x => x.ContainsKey("From") && Equals(x["Category"], category));
+        Assert.DoesNotContain("Resposta real", log.Text);
+        Assert.DoesNotContain("segredo-simulado", log.Text);
     }
 
     private static GeminiTutorIaProvider Provider(HttpClient http) => new(http,

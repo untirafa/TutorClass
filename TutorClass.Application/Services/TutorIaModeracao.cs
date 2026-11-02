@@ -15,11 +15,6 @@ public static partial class TutorIaModeracao
     public const string Motivo = "MENSAGEM_OFENSIVA";
     public const string FalhaTecnica = "ERRO_MODERACAO";
     public const string Aviso = "Essa mensagem contém uma ofensa direta. Reformule sua pergunta com respeito para continuar. Nenhuma mensagem da sua quota foi consumida.";
-    [GeneratedRegex(
-        @"^(?:(?:voce|vc|tu|tutoria)(?: e| eh| es)?\s+)?(?:(?:seu|sua|um|uma)\s+)?(?:idiota|imbecil|burro|burra|otario|otaria|inutil|estupido|estupida|vagabundo|vagabunda|filho da puta|filha da puta)$|^(?:vai|va) (?:se f[ou]der|tomar no cu)$",
-        RegexOptions.CultureInvariant, 100)]
-    private static partial Regex Ofensa();
-
     public static bool DeveBloquear(string mensagem)
         => Avaliar(mensagem) is not null;
 
@@ -32,15 +27,14 @@ public static partial class TutorIaModeracao
         var text = string.Join(" ", normalized.ToString().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('!', '.', '?').Trim();
         if (PossuiDadosPessoais(text))
             return new(DadosPessoais, "Sua mensagem parece conter informações pessoais. Remova esses dados e envie sua pergunta novamente. Você não precisa compartilhar documentos ou números pessoais para estudar com a TutorIA.");
-        if (Match(text, @"^(?:eu )?(?:vou|irei) (?:te bater|bater (?:em voce|em vc|em ti|no meu colega|na minha colega)|te matar|matar voce|te agredir|te espancar|matar (?:o|a|meu|minha) (?:professor|professora|colega)|te perseguir|divulgar suas fotos intimas)(?: hoje| amanha| depois da aula)?$") ||
+        var linguagem = ModeracaoLinguagem.Avaliar(mensagem);
+        if (linguagem == ModeracaoLinguagem.Categoria.Ameaca ||
             Match(text, @"^(?:me ajude a|quero) (?:ameacar|assediar|chantagear|humilhar) (?:meu|minha|o|a) (?:colega|professor|professora|aluno|aluna)(?:\s.*)?$"))
             return new(Ameaca, "Esta mensagem não pôde ser enviada porque pode violar as regras de segurança do TutorClass. Reformule sua mensagem com respeito e segurança.");
         if (Match(text, @"^(?:ignore|desconsidere) (?:todas )?(?:as )?(?:regras|restricoes|instrucoes)(?:\s.*)?$") ||
             Match(text, @"^(?:me (?:ensine|ajude) a|quero|como (?:posso )?)\s*(?:burlar (?:a cota|o limite|as restricoes)|invadir (?:a conta|o sistema)|acessar (?:a conta|as conversas) de outr[ao])(?:\s.*)?$"))
             return new(AcessoIndevido, "Não posso atender a essa solicitação. Reformule sua mensagem dentro das funcionalidades e das regras de uso da TutorIA.");
-        // A word alone can be a vocabulary prompt. Require a directed expression.
-        if ((text.Contains(' ') && Ofensa().IsMatch(text)) ||
-            Match(text, @"^(?:meu|minha|o|a) (?:professor|professora|colega|aluno|aluna) e (?:um |uma )?(?:idiota|imbecil|burro|burra|inutil)$"))
+        if (linguagem == ModeracaoLinguagem.Categoria.Ofensa)
             return new(Motivo, "Vamos manter uma comunicação respeitosa. Reformule sua mensagem para que eu possa ajudar com seus estudos. Nenhuma mensagem da sua quota foi consumida.");
         return null;
     }

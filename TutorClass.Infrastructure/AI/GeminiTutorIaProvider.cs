@@ -125,6 +125,7 @@ public sealed class GeminiTutorIaProvider(HttpClient client, GeminiOptions optio
         Func<string, CancellationToken, Task>? receberTexto, CancellationToken cancellationToken)
     {
         var timer = Stopwatch.StartNew();
+        double? firstTextMs = null;
         int? status = null;
         var categoria = "sucesso";
         var googleStatus = "nao_informado";
@@ -205,6 +206,7 @@ public sealed class GeminiTutorIaProvider(HttpClient client, GeminiOptions optio
                 {
                     if (primeiro)
                     {
+                        firstTextMs = timer.Elapsed.TotalMilliseconds;
                         primeiro = false;
                         timeout.CancelAfter(TimeSpan.FromSeconds(options.TimeoutSeconds));
                     }
@@ -230,6 +232,7 @@ public sealed class GeminiTutorIaProvider(HttpClient client, GeminiOptions optio
                     texts.Add(text.GetString()!);
             var result = string.Join("\n", texts).Trim();
             if (string.IsNullOrWhiteSpace(result)) throw new TutorIaProviderException("resposta_vazia");
+            firstTextMs = timer.Elapsed.TotalMilliseconds;
             return result;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -243,8 +246,8 @@ public sealed class GeminiTutorIaProvider(HttpClient client, GeminiOptions optio
         catch (DecoderFallbackException) { categoria = "codificacao"; throw new TutorIaProviderException(categoria); }
         finally
         {
-            logger.LogInformation("TutorIA Provider={Provider} DurationMs={DurationMs} HttpStatus={HttpStatus} Success={Success} Category={Category} Model={Model} Endpoint={Endpoint} GoogleStatus={GoogleStatus} GoogleReason={GoogleReason} Attempt={Attempt}",
-                "Gemini", timer.ElapsedMilliseconds, status, categoria == "sucesso", categoria, model, endpoint, googleStatus, googleReason, tentativa);
+            logger.LogInformation("TutorIA Provider={Provider} DurationMs={DurationMs} HttpStatus={HttpStatus} Success={Success} Category={Category} Model={Model} Endpoint={Endpoint} GoogleStatus={GoogleStatus} GoogleReason={GoogleReason} Attempt={Attempt} FirstTextMs={FirstTextMs} Streaming={Streaming}",
+                "Gemini", timer.ElapsedMilliseconds, status, categoria == "sucesso", categoria, model, endpoint, googleStatus, googleReason, tentativa, firstTextMs, receberTexto is not null);
         }
     }
 

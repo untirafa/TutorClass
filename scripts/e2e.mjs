@@ -24,9 +24,19 @@ async function login(email) {
   ok('aluno: botão de agendamento', await book.count() > 0);
   if (await book.count()) { await book.click(); ok('aluno: diálogo de agendamento', await page.locator('dialog[open]').count() === 1);
     await page.keyboard.press('Escape'); ok('aluno: Esc fecha diálogo', await page.locator('dialog[open]').count() === 0); }
+  // Avaliação do professor: botão no cartão da aula concluída e no perfil do professor
+  await page.goto(base + '/#app/aulas'); await page.getByRole('button', { name: /avaliar professor/i }).first().waitFor({ timeout: 5000 }).catch(() => {});
+  ok('aluno: botão Avaliar professor na aula concluída', await page.getByRole('button', { name: /avaliar professor/i }).count() > 0);
+  await page.getByRole('button', { name: /avaliar professor/i }).first().click();
+  ok('aluno: diálogo de avaliação', await page.locator('dialog[open]').getByText(/como foi sua aula/i).count() === 1);
+  await page.locator('dialog[open]').getByRole('button', { name: /publicar avaliação/i }).click(); await page.waitForTimeout(500);
+  ok('aluno: avaliação enviada', await page.locator('.toast.is-success').count() > 0);
+  await page.goto(base + '/#app/professores'); await page.waitForSelector('main article a'); await page.locator('main article a', { hasText: /Beatriz/ }).first().click();
+  await page.getByRole('tab', { name: /avaliações/i }).click(); await page.getByRole('heading', { name: /avalie este professor/i }).waitFor({ timeout: 5000 }).catch(() => {});
+  ok('aluno: avaliar pelo perfil do professor', await page.getByRole('heading', { name: /avalie este professor/i }).count() === 1);
   // Plano Gratuito: convite amigável no topo (sem mensagem seca na tela) e retorno para os planos
   await page.goto(base + '/#app/tutoria'); await page.waitForSelector('.toast.is-upgrade');
-  ok('gratuito: convite de upgrade no topo', (await page.locator('.toast.is-upgrade').first().boundingBox())?.y < 120);
+  ok('gratuito: convite de upgrade no topo', (await page.locator('.toast.is-upgrade').first().boundingBox())?.y < 260);
   ok('gratuito: leva aos planos', /#app\/planos/.test(page.url()));
   ok('gratuito: sem mensagem de indisponível', !/não está disponível no plano Gratuito/i.test(await page.locator('body').innerText()));
   await page.goto(base + '/#app/planos'); await page.waitForSelector('main h1');

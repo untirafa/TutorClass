@@ -8,6 +8,7 @@ import { pageHeader, pagedList, loading, errorState, emptyState, tabs, stars, ba
 import { createForm, field } from '../ui/form.js';
 import { openDialog } from '../ui/dialog.js';
 import { notice } from '../ui/toast.js';
+import { rateLesson } from './lessons.js';
 import { teacherCard, reviewCard, qualificationCard, weeklySlotText, subjectOptions, inApp } from './shared.js';
 
 /* ---------- Busca (barra de pesquisa + gaveta de filtros no topo) ---------- */
@@ -173,7 +174,21 @@ async function renderProfile(ctx) {
     h('h2', 'Qualificações'), (profile.qualificacoes || []).length ? h('div', { class: 'grid cards' }, profile.qualificacoes.map(qualificationCard)) : emptyState('Nenhuma qualificação pública disponível.'));
   const materias = () => (profile.materias || []).length
     ? h('ul', null, profile.materias.map(m => h('li', m))) : emptyState('Nenhuma matéria vinculada ainda.');
-  const avaliacoes = () => reviews.length ? h('div', { class: 'grid cards' }, reviews.map(reviewCard)) : emptyState('Nenhuma avaliação publicada.');
+  // Aluno que já concluiu aula com este professor avalia direto pelo perfil.
+  const rateBox = () => {
+    const box = h('div', { class: 'panel stack-sm' });
+    if (!isStudent()) return null;
+    box.append(h('p', { class: 'muted' }, 'Verificando suas aulas…'));
+    get('/api/aulas/minhas').then((all) => {
+      const done = all.filter(l => l.status === 'Concluida' && (l.professorId === profile.id || l.professor === profile.nome));
+      box.replaceChildren(h('h2', 'Avalie este professor'), ...(done.length
+        ? [h('p', null, `Você concluiu ${done.length} aula(s) com ${profile.nome}. Conte como foi.`),
+          h('div', { class: 'actions' }, done.map(l => h('button', { type: 'button', class: 'btn primary', onclick: () => rateLesson(l.id) }, `Avaliar aula de ${dayOnly(l.inicio)}`)))]
+        : [h('p', { class: 'muted' }, 'Você poderá avaliar este professor depois de concluir uma aula com ele.')]));
+    }).catch(() => box.replaceChildren());
+    return box;
+  };
+  const avaliacoes = () => h('div', { class: 'stack' }, rateBox(), reviews.length ? h('div', { class: 'grid cards' }, reviews.map(reviewCard)) : emptyState('Nenhuma avaliação publicada.'));
   const agenda = () => h('div', { class: 'stack' },
     h('h2', 'Disponibilidade semanal'),
     (profile.disponibilidades || []).length ? h('ul', null, profile.disponibilidades.map(d => h('li', weeklySlotText(d)))) : emptyState('O professor ainda não cadastrou horários.'),

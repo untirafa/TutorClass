@@ -26,7 +26,7 @@ export default async function lessons(ctx) {
   const out = h('div', { 'aria-live': 'polite' });
   const render = (status) => mount(out, pagedList(
     data.filter(l => !status || l.status === status).sort((a, b) => new Date(b.inicio) - new Date(a.inicio)),
-    (l) => lessonCard(l, { onOpen: () => openLesson(l.id, { reload }) }), { size: 9, empty: 'Nenhuma aula nesta seleção.', label: 'aulas' }));
+    (l) => lessonCard(l, { onOpen: () => openLesson(l.id, { reload }), extra: isStudent() && l.status === 'Concluida' ? btn('Avaliar professor', () => rateLesson(l.id, { onDone: reload }), { kind: 'primary' }) : null }), { size: 9, empty: 'Nenhuma aula nesta seleção.', label: 'aulas' }));
   const filter = createForm({ fields: [field('status', 'Mostrar aulas', 'text', { required: false, options: statuses.map(([value, label]) => ({ value, label })) })], submit: 'Filtrar', onSubmit: (v) => render(v.status || '') });
   host.append(h('p', { class: 'muted' }, 'Todos os horários são exibidos no fuso de Brasília.'), data.length ? filter.el : null, out);
   ctx.host.append(pageHeader('Minhas aulas', null, isStudent() ? linkButton('Encontrar um professor', '#app/professores') : null), host);
@@ -72,9 +72,7 @@ export async function openLesson(idOrSummary, { reload, guardianOf } = {}) {
     add(btn('Ver acompanhamento', () => showFollowup(id)));
     if (isTeacher()) add(btn('Registrar acompanhamento', () => editFollowup(id)));
     if (isStudent()) {
-      add(btn('Avaliar professor', () => formDialog('Como foi sua aula?', [
-        field('nota', 'Nota', 'text', { options: [{ value: '5', label: '5 – Excelente' }, { value: '4', label: '4 – Muito boa' }, { value: '3', label: '3 – Boa' }, { value: '2', label: '2 – Regular' }, { value: '1', label: '1 – Ruim' }] }),
-        optional('comentario', 'Comentário')], {}, async (v) => { await post(`/api/aulas/${id}/avaliacao`, { nota: Number(v.nota), comentario: v.comentario }); }, { save: 'Publicar avaliação', success: 'Avaliação publicada.' })));
+      add(btn('Avaliar professor', () => rateLesson(id)));
       add(btn('Ver gravação', async () => { const r = await get(`/api/aulas/${id}/gravacao`); (await import('./recordings.js')).showRecording(r); }));
     }
   }
@@ -87,6 +85,15 @@ export async function openLesson(idOrSummary, { reload, guardianOf } = {}) {
   if ((isStudent() || guardian) && l.status !== 'Cancelada') add(btn('Pagamento simulado', () => payLesson(l, { guardianOf, reload })));
   if (isTeacher() && l.status !== 'Cancelada') add(btn('Compartilhar material', async () => { const m = await import('./materials.js'); dlg.close(); m.materialForm(null, l, null, reload); }));
   return dlg;
+}
+
+// Avaliação do professor (uma por aula concluída; o servidor recusa a segunda).
+export function rateLesson(lessonId, { onDone } = {}) {
+  return formDialog('Como foi sua aula?', [
+    field('nota', 'Nota', 'text', { options: [{ value: '5', label: '★★★★★ 5 – Excelente' }, { value: '4', label: '★★★★ 4 – Muito boa' }, { value: '3', label: '★★★ 3 – Boa' }, { value: '2', label: '★★ 2 – Regular' }, { value: '1', label: '★ 1 – Ruim' }] }),
+    optional('comentario', 'Comentário (opcional)')], {},
+  async (v) => { await post(`/api/aulas/${lessonId}/avaliacao`, { nota: Number(v.nota), comentario: v.comentario }); onDone?.(); },
+  { description: 'Sua avaliação aparece no perfil público do professor e só pode ser enviada uma vez por aula.', save: 'Publicar avaliação', success: 'Avaliação publicada. Obrigado!' });
 }
 
 export function payLesson(l, { guardianOf, reload } = {}) {

@@ -9,11 +9,11 @@ A API implementa o nucleo do dominio: usuarios, perfis principais, materias, can
 Depois do deploy, **https://tutorclass.onrender.com/** abre o frontend público.
 A mesma aplicação ASP.NET Core atende `/api/...`, `/swagger` e `/health`.
 
-Os arquivos públicos estão em `TutorClass.API/wwwroot` e entram automaticamente no `dotnet publish` e na imagem Docker. `config.js` usa `window.location.origin`: em produção chama a API do próprio Render; localmente chama a API local. O frontend usa rotas por fragmento (`/#login`, `/#app/inicio`), sem fallback que transforme erros da API em HTML.
+Os arquivos públicos estão em `TutorClass.API/wwwroot` e entram automaticamente no `dotnet publish` e na imagem Docker. `config.js` usa `window.location.origin`: em produção chama a API do próprio Render; localmente chama a API local. O front-end é feito de módulos ES nativos (sem build, sem CDN) com rotas por fragmento (`/#home`, `/#professores`, `/#login`, `/#app/inicio`), sem fallback que transforme erros da API em HTML, e segue a **WCAG 2.2 AA** (veja [acessibilidade](docs/Acessibilidade.md)).
 
 Não é necessário configurar CORS para o site público na mesma origem. CORS adicional é habilitado somente em Development. Remova do painel do Render as antigas variáveis `Cors__AllowedOrigins__*` usadas para testes locais; mesmo presentes, são ignoradas em Production.
 
-Veja [publicação, diff e validação](docs/Frontend-publicacao.md).
+Veja [estrutura, publicação e validação](docs/Frontend-publicacao.md) e [acessibilidade](docs/Acessibilidade.md). Para testar sem a API: `npm install`, `npm run mock` (contas `aluno@`, `professor@`, `responsavel@`, `admin@teste.dev`, senha `Senha@2026`), `npm test` e `npm run audit:a11y`.
 Cadastro, login, JWT Bearer, confirmação em `/api/auth/me` e mensagens reais da API permanecem preservados.
 
 ## Executar site e API em desenvolvimento

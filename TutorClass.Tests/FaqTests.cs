@@ -49,6 +49,19 @@ public sealed class FaqTests
     }
 
     [Fact]
+    public async Task Faq_excluido_e_removido_definitivamente()
+    {
+        await using var db = CreateDbContext();
+        var seeded = SeedFaqs(db);
+        var service = new FaqService(db);
+
+        await service.ExcluirAsync(seeded.CancelLesson, CancellationToken.None);
+
+        Assert.False(db.PerguntasFrequentes.Any(f => f.Id == seeded.CancelLesson));
+        await Assert.ThrowsAsync<TutorClass.Domain.Common.DomainException>(() => service.ExcluirAsync(seeded.CancelLesson, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task Ordem_e_respeitada()
     {
         await using var db = CreateDbContext();

@@ -45,4 +45,12 @@ public sealed class AdminFaqController : ControllerBase
     {
         return Ok(await _service.AtivarAsync(id, cancellationToken));
     }
+
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Excluir(Guid id, CancellationToken cancellationToken)
+    {
+        await _service.ExcluirAsync(id, cancellationToken);
+        return NoContent();
+    }
 }

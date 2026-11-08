@@ -175,6 +175,15 @@ public sealed class FaqService
         return ToResponse(faq);
     }
 
+    public async Task ExcluirAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var faq = _db.PerguntasFrequentes.SingleOrDefault(f => f.Id == id)
+            ?? throw new DomainException("FAQ nao encontrado.");
+
+        _db.RemoveEntity(faq);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
     private void EnsureUniqueQuestion(string pergunta, Guid? ignoredId = null)
     {
         var normalizedQuestion = Normalize(pergunta);

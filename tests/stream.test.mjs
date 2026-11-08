@@ -1,12 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
-import vm from 'node:vm';
-const source = await readFile(new URL('../TutorClass.API/wwwroot/api.js', import.meta.url), 'utf8');
-const makeClient = fetch => {
-  const context = vm.createContext({fetch, URL, AbortController, DOMException, TypeError, TextDecoder, setTimeout, clearTimeout});
-  vm.runInContext(source, context); return context.TutorClassHttp;
-};
+import * as http from '../TutorClass.API/wwwroot/js/core/http.js';
+const makeClient = fetch => ({ stream: (...a) => { globalThis.fetch = fetch; return http.stream(...a); } });
 const encode = new TextEncoder();
 test('trecho aparece antes do complete, com UTF-8 dividido e JWT somente na API', async () => {
   let writer, calls = 0;

@@ -13,11 +13,16 @@ public sealed class FrontendHostingTests
     [Theory]
     [InlineData("/","text/html")]
     [InlineData("/index.html","text/html")]
-    [InlineData("/style.css","text/css")]
     [InlineData("/config.js","text/javascript")]
-    [InlineData("/api.js","text/javascript")]
-    [InlineData("/app.js","text/javascript")]
-    [InlineData("/tutor-text.js","text/javascript")]
+    [InlineData("/assets/css/tokens.css","text/css")]
+    [InlineData("/assets/css/base.css","text/css")]
+    [InlineData("/assets/css/layout.css","text/css")]
+    [InlineData("/assets/css/components.css","text/css")]
+    [InlineData("/assets/img/hero.svg","image/svg+xml")]
+    [InlineData("/js/main.js","text/javascript")]
+    [InlineData("/js/routes.js","text/javascript")]
+    [InlineData("/js/core/http.js","text/javascript")]
+    [InlineData("/js/core/a11y.js","text/javascript")]
     public async Task Production_entrega_arquivos_publicos(string path, string mediaType)
     {
         await using var factory = new TutorClassApiFactory(environmentName: "Production");
@@ -28,7 +33,11 @@ public sealed class FrontendHostingTests
         Assert.Equal(mediaType, response.Content.Headers.ContentType?.MediaType);
         var body = await response.Content.ReadAsStringAsync();
         Assert.NotEmpty(body);
-        if (path == "/") Assert.Contains("id=\"auth-form\"", body);
+        if (path == "/") {
+            Assert.Contains("lang=\"pt-BR\"", body);
+            Assert.Contains("id=\"main\"", body);
+            Assert.Contains("class=\"skip-link\"", body);
+        }
         if (path == "/config.js") {
             Assert.Contains("window.location.origin", body);
             Assert.DoesNotContain("onrender.com", body);
@@ -43,6 +52,8 @@ public sealed class FrontendHostingTests
     [InlineData("/.git/config")]
     [InlineData("/.local/tutorclass.db")]
     [InlineData("/missing.js")]
+    [InlineData("/js/inexistente.js")]
+    [InlineData("/professores")]
     [InlineData("/login")]
     public async Task Production_nao_substitui_404_por_HTML_nem_expoe_arquivos_privados(string path)
     {
@@ -50,7 +61,7 @@ public sealed class FrontendHostingTests
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
         var response = await client.GetAsync(path);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.DoesNotContain("id=\"auth-form\"", await response.Content.ReadAsStringAsync());
+        Assert.DoesNotContain("id=\"main\"", await response.Content.ReadAsStringAsync());
     }
 
     [Theory]

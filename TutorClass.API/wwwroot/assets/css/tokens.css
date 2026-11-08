@@ -1,0 +1,86 @@
+/* ==========================================================================
+   Tokens de design — cores, tipografia, espaço. Contrastes calculados (WCAG 2.2 AA):
+   texto normal ≥ 4,5:1; texto grande e componentes de interface ≥ 3:1.
+   ========================================================================== */
+:root {
+  color-scheme: light dark;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem; --space-5: 1.5rem;
+  --space-6: 2rem; --space-7: 3rem; --space-8: 4.5rem;
+  --radius: .875rem; --radius-sm: .5rem; --radius-pill: 999px;
+  --target: 2.75rem;            /* 44 px: alvo mínimo recomendado no Manual PIM IV */
+  --container: 72rem;
+  --header-h: 4rem;
+  --sidebar-w: 16.5rem;
+
+  /* Claro (padrão) */
+  --bg: #f5f7fb;  --surface: #ffffff;  --surface-2: #eaf0f8;  --surface-3: #dce6f4;
+  --ink: #101a2e; --muted: #44536a;   --line: #c9d3e1;  --border: #62718a;
+  --primary: #1c4f96; --primary-hover: #123a75; --on-primary: #ffffff; --primary-soft: #e3ecfa; --primary-ink: #123a75;
+  --accent: #f2a33a;
+  --ok-bg: #dff3e5; --ok-ink: #0e5128;
+  --warn-bg: #fff0cf; --warn-ink: #653700;
+  --bad-bg: #fde4e4; --bad-ink: #8a1a1a; --bad: #b42323;
+  --neutral-bg: #e6ecf5; --neutral-ink: #26364f;
+  --focus: #101a2e; --focus-halo: #ffffff;
+  --shadow: 0 1px 2px rgb(16 26 46 / .06), 0 8px 24px rgb(16 26 46 / .06);
+  --hero-from: #e3ecfa; --hero-to: #f5f7fb;
+}
+
+/* Escuro automático (preferência do sistema), a menos que o usuário force o tema claro */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-contrast="high"]) { --_dark: 1;
+    --bg: #0b1322; --surface: #121c31; --surface-2: #19263f; --surface-3: #223353;
+    --ink: #edf2fa; --muted: #b6c3d8; --line: #2c3d5c; --border: #8d9db6;
+    --primary: #8db8ff; --primary-hover: #b3d0ff; --on-primary: #08152b; --primary-soft: #1b2d50; --primary-ink: #c6dcff;
+    --ok-bg: #123a22; --ok-ink: #b6ecc7; --warn-bg: #46300a; --warn-ink: #ffe0a1;
+    --bad-bg: #4a1818; --bad-ink: #ffc4c4; --bad: #ff8f8f; --neutral-bg: #22324d; --neutral-ink: #d5e0f1;
+    --focus: #ffd166; --focus-halo: #0b1322; --shadow: 0 1px 2px rgb(0 0 0 / .4);
+    --hero-from: #17274a; --hero-to: #0b1322;
+  }
+}
+:root[data-theme="dark"]:not([data-contrast="high"]) {
+  --bg: #0b1322; --surface: #121c31; --surface-2: #19263f; --surface-3: #223353;
+  --ink: #edf2fa; --muted: #b6c3d8; --line: #2c3d5c; --border: #8d9db6;
+  --primary: #8db8ff; --primary-hover: #b3d0ff; --on-primary: #08152b; --primary-soft: #1b2d50; --primary-ink: #c6dcff;
+  --ok-bg: #123a22; --ok-ink: #b6ecc7; --warn-bg: #46300a; --warn-ink: #ffe0a1;
+  --bad-bg: #4a1818; --bad-ink: #ffc4c4; --bad: #ff8f8f; --neutral-bg: #22324d; --neutral-ink: #d5e0f1;
+  --focus: #ffd166; --focus-halo: #0b1322; --shadow: 0 1px 2px rgb(0 0 0 / .4);
+  --hero-from: #17274a; --hero-to: #0b1322;
+}
+
+/* Alto contraste (escolha do usuário): preto sobre branco, bordas fortes, sem sombras */
+:root[data-contrast="high"] {
+  --bg: #ffffff; --surface: #ffffff; --surface-2: #f0f0f0; --surface-3: #e0e0e0;
+  --ink: #000000; --muted: #1a1a1a; --line: #000000; --border: #000000;
+  --primary: #0021a5; --primary-hover: #00126b; --on-primary: #ffffff; --primary-soft: #ffffff; --primary-ink: #00126b;
+  --ok-bg: #ffffff; --ok-ink: #004d1a; --warn-bg: #ffffff; --warn-ink: #5c2e00; --bad-bg: #ffffff; --bad-ink: #7a0000; --bad: #7a0000;
+  --neutral-bg: #ffffff; --neutral-ink: #000000; --focus: #000000; --focus-halo: #ffffff; --shadow: none;
+  --hero-from: #ffffff; --hero-to: #ffffff;
+}
+:root[data-contrast="high"][data-theme="dark"] {
+  --bg: #000000; --surface: #000000; --surface-2: #151515; --surface-3: #262626;
+  --ink: #ffffff; --muted: #ffffff; --line: #ffffff; --border: #ffffff;
+  --primary: #ffe600; --primary-hover: #fff27a; --on-primary: #000000; --primary-soft: #000000; --primary-ink: #ffe600;
+  --ok-bg: #000000; --ok-ink: #7dff9f; --warn-bg: #000000; --warn-ink: #ffd34d; --bad-bg: #000000; --bad-ink: #ff9d9d; --bad: #ff9d9d;
+  --neutral-bg: #000000; --neutral-ink: #ffffff; --focus: #ffe600; --focus-halo: #000000;
+  --hero-from: #000000; --hero-to: #000000;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-contrast="high"][data-theme="auto"] {
+    --bg: #000000; --surface: #000000; --surface-2: #151515; --surface-3: #262626;
+    --ink: #ffffff; --muted: #ffffff; --line: #ffffff; --border: #ffffff;
+    --primary: #ffe600; --primary-hover: #fff27a; --on-primary: #000000; --primary-soft: #000000; --primary-ink: #ffe600;
+    --ok-bg: #000000; --ok-ink: #7dff9f; --warn-bg: #000000; --warn-ink: #ffd34d; --bad-bg: #000000; --bad-ink: #ff9d9d; --bad: #ff9d9d;
+    --neutral-bg: #000000; --neutral-ink: #ffffff; --focus: #ffe600; --focus-halo: #000000;
+    --hero-from: #000000; --hero-to: #000000;
+  }
+}
+
+/* Tamanho do texto escolhido pelo usuário (tudo em rem acompanha) */
+html { font-size: 100%; }
+:root[data-text-scale="115"] { font-size: 115%; }
+:root[data-text-scale="130"] { font-size: 130%; }

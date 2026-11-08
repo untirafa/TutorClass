@@ -8,7 +8,11 @@ namespace TutorClass.Infrastructure.Chat;
 /// <summary>Persistent chat for the local development database; production keeps its MongoDB store.</summary>
 public sealed class SqliteMentoriaChatStore : IMentoriaChatStore, IDisposable
 {
+    // Todas as instâncias que apontam para o mesmo arquivo compartilham o mesmo bloqueio: o SQLite aceita um único
+    // escritor por vez e "database is locked" (SQLITE_BUSY) é devolvido na hora quando duas conexões disputam a escrita.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> WriteLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _connectionString;
+    private readonly SemaphoreSlim _writeLock;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
     private bool _schemaCreated;
 
@@ -21,8 +25,10 @@ public sealed class SqliteMentoriaChatStore : IMentoriaChatStore, IDisposable
         {
             DataSource = fullPath,
             ForeignKeys = true,
-            Pooling = false
+            Pooling = false,
+            DefaultTimeout = 30
         }.ToString();
+        _writeLock = WriteLocks.GetOrAdd(fullPath, _ => new SemaphoreSlim(1, 1));
     }
 
     public bool Configurado => true;
@@ -142,9 +148,19 @@ public sealed class SqliteMentoriaChatStore : IMentoriaChatStore, IDisposable
         try
         {
             await EnsureSchemaAsync(cancellationToken);
-            await using var connection = new SqliteConnection(_connectionString);
-            await connection.OpenAsync(cancellationToken);
-            return await operation(connection);
+            await _writeLock.WaitAsync(cancellationToken);
+            try
+            {
+                await using var connection = new SqliteConnection(_connectionString);
+                await connection.OpenAsync(cancellationToken);
+                using (var pragma = connection.CreateCommand())
+                {
+                    pragma.CommandText = "PRAGMA busy_timeout = 10000;";
+                    await pragma.ExecuteNonQueryAsync(cancellationToken);
+                }
+                return await operation(connection);
+            }
+            finally { _writeLock.Release(); }
         }
         catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
         {

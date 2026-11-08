@@ -2,13 +2,15 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
+import * as http from '../TutorClass.API/wwwroot/js/core/http.js';
 
-const source = await readFile(new URL('../TutorClass.API/wwwroot/api.js', import.meta.url), 'utf8');
+// Executa o módulo real trocando apenas o fetch global.
+globalThis.location = { protocol: 'http:', origin: 'http://localhost:5242' };
 function client(fetch) {
-  const context = vm.createContext({fetch, URL, AbortController, TypeError, setTimeout, clearTimeout,
-    location: {protocol: 'http:', origin: 'http://localhost:5242'}});
-  vm.runInContext(source, context);
-  return context.TutorClassHttp;
+  return {
+    normalizeBaseUrl: http.normalizeBaseUrl,
+    request: (...a) => { globalThis.fetch = fetch; return http.request(...a); },
+  };
 }
 const base = 'https://api.example.test';
 test('cadastro serializa somente o payload e usa JSON, sem Bearer', async () => {

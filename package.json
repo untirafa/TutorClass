@@ -1,0 +1,16 @@
+{
+  "name": "tutorclass-frontend",
+  "private": true,
+  "type": "module",
+  "description": "Ferramentas de teste e prévia do front-end do TutorClass (sem dependências em produção).",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "serve": "node scripts/serve-frontend.mjs",
+    "mock": "node scripts/mock-api.mjs",
+    "audit:a11y": "node scripts/a11y-audit.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "playwright": "^1.49.0"
+  }
+}

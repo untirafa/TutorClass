@@ -117,6 +117,6 @@ public sealed class AuthService
 
     private static UsuarioAutenticadoDto ToDto(Usuario usuario)
     {
-        return new UsuarioAutenticadoDto(usuario.Id, usuario.Nome, usuario.Email, usuario.GetType().Name);
+        return new UsuarioAutenticadoDto(usuario.Id, usuario.Nome, usuario.Email, usuario.GetType().Name, (usuario as Aluno)?.DataNascimento);
     }
 }

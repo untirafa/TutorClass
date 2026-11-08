@@ -1,5 +1,5 @@
 import {randomBytes, randomUUID} from 'node:crypto';
-import '../TutorClass.API/wwwroot/api.js';
+import * as TutorClassHttp from '../TutorClass.API/wwwroot/js/core/http.js';
 
 const base = TutorClassHttp.normalizeBaseUrl(process.env.API_BASE_URL);
 const result = [];

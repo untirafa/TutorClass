@@ -1,89 +1,61 @@
-# Publicação do frontend pelo ASP.NET Core
+# Publicação do front-end pelo ASP.NET Core
 
-## Resultado preparado
+## Resultado
 
-Depois de commit, push e redeploy aprovados, **https://tutorclass.onrender.com/** deverá abrir o site público.
-A mesma aplicação atende /api/..., /swagger e /health. Nenhum commit, push ou deploy foi executado nesta tarefa.
+O front-end foi reestruturado por completo. Continua sendo servido pela própria API (`TutorClass.API/wwwroot`) na **mesma origem**: navegador → API ASP.NET Core → PostgreSQL/MongoDB. Não há CDN, fonte externa, imagem de terceiros ou etapa de build. Nenhum commit, push ou deploy foi executado.
 
-O fluxo permanece: navegador → API ASP.NET Core → PostgreSQL Neon.
-Não há conexão do frontend com Neon nem novos segredos em arquivos públicos.
+Funcionalidades preservadas: cadastro e login (aluno, professor, responsável), busca e perfil público de professores, agendamento, aulas e pagamento simulado, materiais, TutorIA (SSE), mentoria com chat, acompanhamentos, gravações, financeiro, planos e assinatura, notificações, conta/privacidade, painel do responsável, perfil/disponibilidade do professor e módulos administrativos (candidaturas, qualificações, analytics, FAQ).
 
-## Diff resumido e arquivos
+## Estrutura
 
-| Arquivo | Alteração |
-|---|---|
-| TutorClass.API/wwwroot/index.html | Movido da raiz com os scripts da correção anterior preservados |
-| TutorClass.API/wwwroot/style.css | Movido da raiz sem mudança de conteúdo |
-| TutorClass.API/wwwroot/app.js | Movido da raiz sem mudança de conteúdo: cadastro, login, /me e sessão preservados |
-| TutorClass.API/wwwroot/api.js | Movido da raiz sem mudança de conteúdo: JSON, Bearer, timeout e erros preservados |
-| TutorClass.API/wwwroot/config.js | Movido; base da API agora é window.location.origin |
-| TutorClass.API/Program.cs | UseDefaultFiles + UseStaticFiles em todos os ambientes; removida entrega manual exclusiva de Development; CORS adicional só em Development |
-| TutorClass.API/appsettings.json | Retiradas as origens locais da configuração geral da primeira correção; conteúdo voltou ao equivalente do arquivo versionado |
-| TutorClass.API/appsettings.Development.json | Mantidas as origens locais explícitas da correção anterior |
-| render.yaml | Retirada configuração de CORS da produção |
-| .dockerignore | Excluídas pastas .local do contexto Docker |
-| TutorClass.Tests/AuthFlowTests.cs | Factory de testes aceita Production/Development com banco isolado, substituição completa do provedor e DataProtection efêmero |
-| TutorClass.Tests/FrontendHostingTests.cs | Novos testes de arquivos públicos, endpoints, 404, autenticação e CORS em Production |
-| TutorClass.Tests/FrontendCorsTests.cs | Testes de CORS local passam a rodar em Development |
-| tests/frontend-auth.test.mjs | Caminho wwwroot e expectativa de mesma origem; testes anteriores preservados |
-| tests/frontend-http.test.mjs | Caminho wwwroot; acrescentados testes de origem Render, domínio alternativo e localhost |
-| scripts/check-auth.mjs | Import atualizado; mesma origem não exige preflight de CORS |
-| scripts/serve-frontend.mjs | Arquivos lidos de wwwroot; ferramenta opcional de prévia estática, não substitui a API |
-| README.md | Instruções atuais de publicação e desenvolvimento |
-| docs/historico/Frontend-API-validacao.md | Relatório anterior preservado e identificado como histórico |
-| docs/Frontend-publicacao.md | Este relatório |
-
-Os hashes SHA-256 de app.js, api.js, index.html e style.css coincidiram antes/depois da mudança de pasta. As correções locais ainda não publicadas foram preservadas. Nenhuma mudança no domínio, banco, migrations ou contratos de autenticação.
-
-O git diff sem staging mostra os arquivos antigos removidos e wwwroot como novo. São movimentações, não descarte do frontend. Não foi feito git add apenas para alterar a apresentação do diff.
-
-## Como funciona
-
-- wwwroot é a única pasta pública. O SDK Web já inclui seus arquivos no dotnet publish.
-- UseDefaultFiles resolve / para index.html; UseStaticFiles entrega CSS/JS e futuros recursos públicos colocados em wwwroot.
-- As rotas do frontend usam fragmentos: /#login, /#cadastro-aluno, /#app/inicio. O navegador não envia o fragmento ao servidor; não há necessidade de fallback.
-- /api/inexistente, /swagger/inexistente, /health/inexistente e arquivos inexistentes retornam 404, não HTML.
-- /appsettings.json e /.git/config não ficam acessíveis.
-- config.js usa a origem da página, tanto no Render quanto em localhost. Preferências antigas de localStorage continuam ignoradas.
-- Os endpoints reais continuam POST /api/auth/registrar/aluno, POST /api/auth/login e GET /api/auth/me. JWT é mantido em RAM e enviado como Authorization: Bearer. As mensagens da API continuam sendo exibidas.
-- Não existe origem CORS extra em Production, mesmo se uma variável antiga permanecer no painel.
-
-## Executar localmente
-
-Na raiz do projeto:
-
-```powershell
-dotnet run --project TutorClass.API --launch-profile http
+```
+TutorClass.API/wwwroot/
+  index.html          casca: skip links, landmarks, regiões ao vivo, <main id="main">
+  config.js           apiBaseUrl = window.location.origin
+  assets/css/         tokens, base, layout, components (temas, alto contraste, escala de texto)
+  assets/img/         logo-tutorclass.webp, hero.svg
+  js/main.js          inicialização, rotas e foco
+  js/routes.js        tabela de rotas   |  js/modules.js  módulos por perfil
+  js/shell.js         cabeçalho (marca + casinha à esquerda; Acessibilidade, Avisos e Sair à direita), barra lateral, painel de acessibilidade
+  js/core/plan.js     convite amigável de upgrade para quem está no plano Gratuito
+  js/core/            http, session, api, router, a11y, dom, format
+  js/lib/markdown.js  renderizador seguro (somente texto → elementos DOM)
+  js/ui/              toast, dialog, form, components
+  js/views/           uma tela por arquivo
 ```
 
-Abra http://localhost:5242. API, frontend, Swagger e health são servidos juntos.
-Reinicie qualquer instância antiga em execução depois de atualizar os arquivos: os arquivos do frontend agora ficam em wwwroot.
+Rotas por fragmento, sem barra inicial: `#home`, `#professores`, `#professores/:id`, `#professores?materia=<id>`, `#login`, `#cadastro-aluno|professor|responsavel`, `#app/:modulo/:id?`. O fragmento não vai ao servidor, portanto `/api/inexistente`, `/swagger/inexistente`, `/login` etc. continuam retornando 404 real.
 
-Se não houver conexão PostgreSQL em Development, o modo SQLite local continua funcionando como antes. Contas locais não são automaticamente contas do Neon.
+## Arquivos antigos a remover
 
-O script node scripts/serve-frontend.mjs continua disponível para prévia dos arquivos. Ele não implementa /api; para cadastro/login, prefira executar ASP.NET Core. Uma API local separada pode ser escolhida temporariamente no diálogo de conexão e precisa permitir a origem da prévia em Development.
+Substituídos pela nova estrutura (apague-os no seu repositório):
+
+- `TutorClass.API/wwwroot/app.js`, `api.js`, `tutor-text.js`, `style.css`, `logo-tutorclass.jpeg`
+- `tests/frontend-auth.test.mjs`, `frontend-chat-moderacao.test.mjs`, `frontend-http.test.mjs`, `frontend-stream.test.mjs`, `frontend-tutor-text.test.mjs`, `frontend-tutoria-errors.test.mjs` (a cobertura equivalente está em `tests/http`, `stream`, `markdown`, `router-format`)
+
+## Executar
+
+```powershell
+dotnet run --project TutorClass.API --launch-profile http   # API + site em http://localhost:5242
+npm install                                                  # só ferramentas de teste
+npm run mock                                                 # API simulada em memória (porta 5242)
+npm run serve                                                # só arquivos estáticos
+```
+
+Contas da API simulada: `aluno@`, `professor@`, `responsavel@`, `admin@`, `menor@teste.dev` (aluno de 12 anos, sem acesso ao financeiro) — senha `Senha@2026`. Na API real, use `POST /api/dev/test-data` (Development) ou cadastre-se: as contas do mock não existem no banco.
 
 ## Validação
 
 ```powershell
-node --test tests/frontend-*.test.mjs
-dotnet test TutorClass.Tests --configuration Release --no-build --no-restore --verbosity quiet
-dotnet publish TutorClass.API/TutorClass.API.csproj --configuration Release --no-restore --output artifacts/public-hosting /p:UseAppHost=false
+npm test                  # node --test tests/*.test.mjs  (29 testes)
+npm run mock              # em outro terminal:
+npm run audit:a11y        # axe-core (WCAG 2.2 A/AA) em 134 telas/estados
+node scripts/e2e.mjs      # fluxos de aluno, responsável, professor e administrador
+dotnet test TutorClass.Tests --configuration Release
 ```
 
-- **24 testes JavaScript aprovados**, incluindo os testes anteriores de payloads, JWT, /me, erros, sessão parcial e os novos testes de origem dinâmica.
-- **308 testes .NET aprovados na suíte completa**, sem falhas nem testes ignorados. Antes disso, os 48 testes selecionados de autenticação, Swagger, CORS Development e hospedagem Production também passaram.
-- dotnet publish Release concluído; wwwroot e os cinco arquivos públicos estão no pacote.
-- Pacote publicado executado com ambiente Production, a partir do diretório de publicação: /, CSS, os três scripts, /swagger e /swagger/v1/swagger.json retornaram 200; /health retornou JSON 200; /api/auth/me sem token retornou 401; rotas e arquivos privados/inexistentes retornaram 404.
-- No teste do pacote, o banco estava propositalmente indisponível e /health informou Unhealthy/Degraded. Isso valida o endpoint, não a conectividade com Neon. A autenticação foi validada no host Production com banco isolado em memória.
-- Docker não está instalado neste ambiente: **build/execução da imagem Docker não foram executados**. O Dockerfile existente já publica a API e copia /app/publish inteiro para a imagem final, incluindo wwwroot; não precisou de alteração.
-- Não foi feita nova validação contra o Render, pois esta versão ainda não foi publicada. A validação da interface em navegador também não foi executada nesta etapa.
+Resultado nesta entrega: 29 testes Node aprovados; auditoria axe sem violações nas 134 combinações; e2e sem falhas. **Os testes .NET e a integração com a API real/Neon não foram executados** (sem SDK .NET no ambiente de desenvolvimento do front-end): `FrontendHostingTests.cs` foi atualizado para os novos caminhos e deve ser rodado por você.
 
-## Render e aprovação
+## Render
 
-Nenhuma variável nova é necessária para o frontend. Preserve as variáveis existentes do backend, principalmente ASPNETCORE_ENVIRONMENT=Production, ConnectionStrings__TutorClassDb e Jwt__Secret.
-
-As antigas Cors__AllowedOrigins__* para localhost podem ser removidas do painel: são desnecessárias e ignoradas em Production. Não adicione https://tutorclass.onrender.com como solução de CORS: o navegador já usa a mesma origem.
-
-Após aprovação, será necessário incluir os arquivos movidos/novos no commit, fazer push para a branch usada pelo Render e realizar redeploy (automático ou manual). Até isso ocorrer, o serviço publicado continua na versão anterior.
-
+Nenhuma variável nova. Depois de commit/push aprovados, o redeploy publica o novo `wwwroot`.

@@ -1,8 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
-import vm from 'node:vm';
-const source=await readFile(new URL('../TutorClass.API/wwwroot/tutor-text.js',import.meta.url),'utf8');
+import {math,render} from '../TutorClass.API/wwwroot/js/lib/markdown.js';
 class Node {
   constructor(tag){this.tagName=tag.toUpperCase();this.children=[];this.value='';}
   append(...children){this.children.push(...children);}
@@ -11,9 +9,8 @@ class Node {
   get textContent(){return this.value+this.children.map(n=>n.textContent).join('');}
   set innerHTML(_){throw new Error('HTML não confiável');}
 }
-const context=vm.createContext({document:{createElement:tag=>new Node(tag),createTextNode:text=>({textContent:text})}});
-vm.runInContext(source,context);
-const renderer=context.TutorClassText;
+globalThis.document={createElement:tag=>new Node(tag),createTextNode:text=>({textContent:text})};
+const renderer={math,render};
 test('títulos, negrito e listas viram elementos; frações e acentos ficam legíveis',()=>{
   const target=new Node('div');renderer.render(target,'### Frações\n**Atenção:** \\(\\frac{1}{2}\\)\n- Ação');
   assert.equal(target.children[0].tagName,'H4');

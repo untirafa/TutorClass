@@ -1,98 +1,60 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-text-scale="100" data-contrast="auto" data-motion="auto" data-theme="auto">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Encontre professores particulares, organize suas aulas e desenvolva sua aprendizagem com o TutorClass.">
-  <title>TutorClass — Aprender é ir além.</title>
-  <link rel="stylesheet" href="style.css?v=20261102e">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <script src="config.js" defer></script>
-  <script src="tutor-text.js?v=20261102c" defer></script>
-  <script src="api.js?v=20261102c" defer></script>
-  <script src="app.js?v=20261102c" defer></script>
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="TutorClass: encontre professores particulares, agende aulas, acompanhe sua evolução e conte com a TutorIA. Plataforma acessível (WCAG 2.2).">
+  <title>TutorClass — Aprender é ir além</title>
+  <link rel="icon" href="assets/img/logo-tutorclass.webp" type="image/webp">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <script src="config.js"></script>
+  <script type="module" src="js/main.js"></script>
 </head>
 <body>
-  <a class="skip button" href="#main">Pular para o conteúdo</a>
-  <header class="header">
+  <a class="skip-link" href="#main" data-skip="main">Pular para o conteúdo principal</a>
+  <a class="skip-link" href="#primary-nav" data-skip="nav" id="skip-nav">Pular para a navegação</a>
+
+  <div class="bg-video" id="bg-video" aria-hidden="true"><video muted loop playsinline preload="auto" tabindex="-1" disablepictureinpicture><source src="videosite.mp4" type="video/mp4"></video></div>
+
+  <header class="site-header" id="site-header">
     <div class="container header-inner">
-      <a class="brand" href="#home" aria-label="TutorClass início"><img class="brand-logo" src="logo-tutorclass.jpeg?v=20261102d" alt="">TutorClass</a>
-      <nav class="public-nav" aria-label="Navegação principal">
-        <a href="#sobre">Sobre nós</a><a href="#oferecemos">Como funciona</a><a href="#profissionais">Professores</a><a href="#avaliacoes">Avaliações</a>
-      </nav>
-      <a id="account-link" class="button small" href="#login">Entrar <span aria-hidden="true">↗</span></a>
+      <a class="brand" href="#home"><img src="assets/img/logo-tutorclass.webp" alt="" width="36" height="36"><span>TutorClass</span></a>
+      <nav class="primary-nav" id="primary-nav" aria-label="Principal"><ul id="primary-nav-list"></ul></nav>
+      <div class="header-actions" id="header-actions"></div>
     </div>
   </header>
-  <main id="main">
-    <!-- LANDING PAGE: conteúdo institucional baseado no README; dados públicos vêm da API. -->
-    <div id="landing">
-      <section id="home" class="hero container">
-        <div class="hero-copy">
-          <span class="eyebrow"><span class="dot"></span> Aprenda com quem entende</span>
-          <h1>Aprender melhor.<br><em>Ir mais longe.</em></h1>
-          <p>Encontre professores, organize suas aulas e acompanhe seu progresso em um só lugar.</p>
-          <div class="actions"><a class="button" href="#cadastro-aluno">Começar agora <span aria-hidden="true">↗</span></a><a class="text-link" href="#profissionais">Ver professores <span aria-hidden="true">→</span></a></div>
-          <div class="hero-note"><span class="check">✓</span> Aulas, mentoria e apoio para estudar.</div>
+
+  <div class="layout" id="layout">
+    <aside class="sidebar" id="sidebar" aria-label="Área interna" hidden></aside>
+    <div class="layout-main">
+      <main id="main" tabindex="-1">
+        <div class="container"><p class="state state-loading" role="status"><span class="spinner" aria-hidden="true"></span> Carregando o TutorClass…</p></div>
+        <noscript><div class="container"><p class="state state-error">O TutorClass precisa de JavaScript para funcionar. Ative-o no navegador e recarregue a página.</p></div></noscript>
+      </main>
+      <footer class="site-footer" id="site-footer">
+        <div class="container">
+          <div class="footer-grid">
+            <div><strong class="brand-name">TutorClass</strong><p class="muted">Aprenda no seu ritmo, com apoio de quem ensina.<br>Projeto acadêmico — pagamentos e gravações são simulados.</p></div>
+            <nav aria-labelledby="ft-explore"><h2 id="ft-explore">Explorar</h2><ul><li><a href="#professores">Buscar professores</a></li><li><a href="#materias">Matérias</a></li><li><a href="#planos">Planos</a></li></ul></nav>
+            <nav aria-labelledby="ft-account"><h2 id="ft-account">Conta</h2><ul><li><a href="#login">Entrar</a></li><li><a href="#cadastro-aluno">Criar conta de aluno</a></li><li><a href="#cadastro-professor">Quero ensinar</a></li><li><a href="#cadastro-responsavel">Sou responsável</a></li></ul></nav>
+            <nav aria-labelledby="ft-help"><h2 id="ft-help">Ajuda e transparência</h2><ul><li><a href="#ajuda">Central de ajuda</a></li><li><a href="#acessibilidade">Acessibilidade</a></li><li><a href="#privacidade">Privacidade e termos</a></li></ul></nav>
+          </div>
+          <p class="footer-note">© 2026 TutorClass · Atalhos: <kbd>Tab</kbd> navega, <kbd>Enter</kbd> ativa, <kbd>Esc</kbd> fecha janelas.</p>
         </div>
-        <div class="hero-art" aria-hidden="true">
-          <img class="hero-photo" src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&amp;fit=crop&amp;w=2000&amp;q=85" alt="Pessoa lendo um livro" fetchpriority="high">
-        </div>
-      </section>
-      <div class="word-carousel" aria-label="Matérias disponíveis"><span>Matemática</span><i>✦</i><span>Ciências</span><i>✦</i><span>Idiomas</span><i>✦</i><span>Humanidades</span><i>✦</i><span>Matemática</span><i>✦</i><span>Ciências</span><i>✦</i><span>Idiomas</span><i>✦</i><span>Humanidades</span></div>
-      <section id="oferecemos" class="section container">
-        <div class="section-heading"><div><span class="eyebrow">APRENDER, DO SEU JEITO</span><h2>Apoio para cada etapa<br>da sua jornada.</h2></div><p>Da primeira dúvida à próxima conquista,<br>você encontra espaço para evoluir.</p></div>
-        <div class="feature-grid">
-          <article class="feature"><img class="feature-photo" src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&amp;fit=crop&amp;w=720&amp;q=80" alt="Estudantes aprendendo juntos" loading="lazy"><span class="feature-icon violet">↗</span><h3>Aulas particulares</h3><p>Encontre professores por matéria e escolha um horário disponível para aprender com atenção individual.</p><a href="#profissionais">Encontre seu professor →</a></article>
-          <article class="feature"><img class="feature-photo" src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&amp;fit=crop&amp;w=720&amp;q=80" alt="Estudante concentrado em uma atividade" loading="lazy"><span class="feature-icon green">✳</span><h3>Mentoria que acompanha</h3><p>Tenha orientação contínua, metas e um canal de conversa com seus mentores no plano Mentoria.</p><a href="#planos">Conheça os planos →</a></article>
-          <article class="feature"><img class="feature-photo" src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&amp;fit=crop&amp;w=720&amp;q=80" alt="Aprendizagem e colaboração com tecnologia" loading="lazy"><span class="feature-icon peach">✧</span><h3>Mais recursos para estudar</h3><p>Acesse materiais do seu professor e conte com a TutorIA para suas dúvidas, conforme seu plano.</p><a href="#cadastro-aluno">Comece sua jornada →</a></article>
-        </div>
-      </section>
-      <section id="sobre" class="about-section">
-        <div class="container about-grid">
-          <div class="about-art" aria-hidden="true"><span class="about-word">trocar.<br>descobrir.<br><em>crescer.</em></span><span class="about-star">✳</span><span class="about-tag">Conhecimento conecta.</span></div>
-          <div><span class="eyebrow">SOBRE NÓS</span><h2>Conectamos quem<br>quer aprender a quem<br>ama ensinar.</h2><p>O TutorClass é uma plataforma que aproxima alunos e professores particulares. Reunimos a busca pelo profissional, o agendamento e o acompanhamento da aprendizagem em um só lugar.</p><h3 id="quem-somos">Quem somos nós</h3><p>Um projeto educacional construído em torno de uma ideia: cada aluno tem uma jornada, e cada professor pode fazer parte dela. Valorizamos a troca, a clareza e o desenvolvimento contínuo.</p><a class="text-link" href="#cadastro-professor">Quero fazer parte como professor ↗</a></div>
-        </div>
-      </section>
-      <section id="profissionais" class="section container">
-        <div class="section-heading"><div><span class="eyebrow">BOAS CONEXÕES, NOVAS POSSIBILIDADES</span><h2>Conheça quem pode<br>ensinar você.</h2></div><p>Professores aprovados na plataforma,<br>com perfis e avaliações para você conhecer.</p></div>
-        <form id="public-filter" class="filter-bar"><label>Qual matéria você quer aprender?<select id="public-subject"><option value="">Todas as matérias</option></select></label><button type="submit">Buscar professores →</button></form>
-        <div id="public-teachers" class="cards" aria-live="polite"><p class="empty">Carregando professores…</p></div>
-      </section>
-      <section id="avaliacoes" class="reviews-section"><div class="container section">
-        <div class="section-heading"><div><span class="eyebrow">EXPERIÊNCIAS COMPARTILHADAS</span><h2>Quem aprende<br>também tem voz.</h2></div><p>Avaliações publicadas por alunos<br>depois de suas aulas concluídas.</p></div>
-        <div id="public-reviews" class="cards" aria-live="polite"><p class="empty">As avaliações dos professores aparecerão aqui.</p></div>
-      </div></section>
-      <section id="planos" class="section container"><div class="center"><span class="eyebrow">ESCOLHA SEU PRÓXIMO PASSO</span><h2>Um plano para o seu momento.</h2><p>As aulas são contratadas separadamente, pelo preço de cada professor.</p></div><div id="landing-plans" class="cards"></div><p class="fine-print center">Versão acadêmica: pagamentos e gravações são simulados. Acesso aos benefícios sujeito às regras de cada plano.</p></section>
-      <div class="word-carousel word-carousel-secondary" aria-label="Recursos do TutorClass"><span>Aulas particulares</span><i>✦</i><span>Mentoria</span><i>✦</i><span>Materiais</span><i>✦</i><span>TutorIA</span><i>✦</i><span>Aulas particulares</span><i>✦</i><span>Mentoria</span><i>✦</i><span>Materiais</span><i>✦</i><span>TutorIA</span></div>
-      <section class="container teacher-cta"><div><span class="eyebrow">PARA PROFESSORES</span><h2>Compartilhe o que sabe.</h2><p>Crie seu perfil e conecte-se a novos alunos.</p></div><a class="button light" href="#cadastro-professor">Quero ensinar ↗</a></section>
-      <section id="faq" class="section container faq-section"><div><span class="eyebrow">AJUDA RÁPIDA</span><h2>Dúvidas comuns</h2><p>Respostas essenciais para começar. Mais tópicos em Ajuda.</p><a class="text-link" href="#cadastro-aluno">Criar minha conta →</a></div><div id="public-faq" class="stack"><p class="empty">Carregando perguntas…</p></div></section>
+      </footer>
     </div>
-    <!-- AUTENTICAÇÃO: mesma API, formulários próprios para cada perfil. -->
-    <section id="auth-view" class="container auth-layout" hidden>
-      <div class="auth-intro"><video class="auth-video" autoplay muted loop playsinline preload="metadata" aria-label="Vídeo em loop de aprendizagem"><source src="cadastro-loop.mp4" type="video/mp4"></video><div class="auth-intro-copy"><span class="eyebrow">BEM-VINDO AO TUTORCLASS</span><h1>Aprenda no<br>seu ritmo.</h1><p>Seu espaço para evoluir.</p><a href="#home" class="text-link">← Voltar ao início</a></div></div>
-      <div class="auth-card"><div class="auth-tabs"><a href="#login" id="login-tab">Entrar</a><a href="#cadastro-aluno" id="register-tab">Criar conta</a></div>
-        <h2 id="auth-title">Entre na sua conta</h2><p id="auth-description">Escolha seu perfil para continuar.</p>
-        <form id="auth-form" class="stack">
-          <label>Eu sou<select name="perfil" id="auth-role"><option value="Aluno">Aluno</option><option value="Professor">Professor</option><option value="Administrador">Administrador</option></select></label>
-          <div id="register-fields" class="stack" hidden><label>Nome completo<input name="nome" autocomplete="name" maxlength="150"></label></div>
-          <label>E-mail<input name="email" type="email" required autocomplete="username"></label>
-          <label>Senha<input name="senha" type="password" required autocomplete="current-password"></label>
-          <div id="student-fields" hidden><label>Data de nascimento (opcional)<input name="dataNascimento" type="date"></label></div>
-          <div id="teacher-fields" class="stack" hidden><label>Sua apresentação<textarea name="biografia" maxlength="2000" placeholder="Conte sobre sua experiência e sua forma de ensinar."></textarea></label><label>Preço por hora (R$)<input name="precoHora" type="number" min="0.01" step="0.01"></label><small>Após criar sua conta, cadastre matérias e qualificações e envie sua candidatura para análise.</small></div>
-          <p id="auth-feedback" class="inline-message" role="status" hidden></p>
-          <button id="auth-submit">Entrar na minha conta →</button>
-        </form>
-      </div>
-    </section>
-    <!-- ÁREA INTERNA: os módulos e ações são montados em app.js conforme o perfil. -->
-    <div id="workspace" class="workspace" hidden>
-      <aside class="sidebar"><div><span class="eyebrow">SEU ESPAÇO</span><strong id="sidebar-name"></strong><small id="sidebar-role"></small></div><nav id="workspace-nav" aria-label="Navegação da área interna"></nav><button id="logout" class="secondary">Sair da conta</button></aside>
-      <section class="workspace-main"><div class="workspace-header"><div><span class="eyebrow" id="workspace-eyebrow">TUTORCLASS</span><h1 id="workspace-title">Visão geral</h1></div><button id="refresh-view" class="secondary"><i class="fas fa-rotate" aria-hidden="true"></i> Atualizar</button></div><nav id="workspace-shortcuts" class="workspace-shortcuts" aria-label="Acessos rápidos"></nav><div id="workspace-content" class="stack" aria-live="polite"></div></section>
-    </div>
-  </main>
-  <footer id="footer"><div class="container footer-grid"><div><a class="brand" href="#home"><img class="brand-logo" src="logo-tutorclass.jpeg?v=20261102d" alt="">TutorClass</a><p>Aprenda no seu ritmo.<br>Avance com confiança.</p></div><div><strong>Explore</strong><a href="#sobre">Sobre</a><a href="#profissionais">Professores</a></div><div><strong>Comece por aqui</strong><a href="#cadastro-aluno">Criar conta</a><a href="#cadastro-professor">Ensinar</a><a href="#login">Entrar</a></div></div><div class="container footer-bottom"><span>TutorClass</span><button id="connection-button" class="text-button">Configurar conexão</button></div></footer>
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-  <dialog id="modal" aria-labelledby="modal-title"><div class="modal-top"><h2 id="modal-title"></h2><button id="modal-close" class="icon-button" aria-label="Fechar janela">×</button></div><div id="modal-content" class="stack"></div></dialog>
-  <noscript><p class="empty">Ative o JavaScript para entrar e carregar as informações da plataforma.</p></noscript>
+  </div>
+
+  <nav class="bottom-nav" id="bottom-nav" aria-label="Atalhos da área interna" hidden></nav>
+
+  <!-- Regiões ao vivo permanentes (4.1.3 Mensagens de status) -->
+  <div id="live-polite" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="live-assertive" class="sr-only" role="alert" aria-live="assertive" aria-atomic="true"></div>
+  <div id="toast-root" class="toast-root"></div>
+  <div id="dialog-root"></div>
 </body>
 </html>

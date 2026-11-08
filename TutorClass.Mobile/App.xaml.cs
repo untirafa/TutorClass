@@ -30,7 +30,7 @@ public partial class App : Application, IAppNavigation
     }
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        window = new Window(new LoginPage(new LoginViewModel(session, this)));
+        window = new Window(new TutorClass.Mobile.Views.WebShellPage());
         return window;
     }
     public void ShowHome()

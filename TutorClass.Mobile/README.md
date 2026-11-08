@@ -209,3 +209,14 @@ Teste real opt-in: use as variáveis de credenciais já documentadas e o filtro 
 Pendências de dispositivo: confirmar visualmente Perfil/Plano, rolagem, Voltar, logout e ausência de sessão ao reabrir o app. O teste em memória verifica a chamada de remoção e o fluxo; a integração com SecureStorage precisa de Android disponível.
 - Teste real desta etapa aprovado: login, GET /api/auth/me, GET /api/planos/me, logout e verificação de sessão não restaurável sem token.
 - Build Android final desta etapa: 0 avisos e 0 erros. APK instalável atualizado em ../artifacts/mobile/com.tutorclass.mobile-Signed.apk.
+
+## Etapa final — Interface Web completa no aplicativo (11/2026)
+O aplicativo passou a abrir a própria interface Web do TutorClass (`https://tutorclass.onrender.com/`) dentro de uma `WebView` nativa (`Views/WebShellPage.cs`). Com isso, o celular tem exatamente o que existe na versão Web: todos os perfis (Aluno, Responsável, Professor e Administrador), Criar conta, Acessibilidade (tamanho do texto, tema escuro, alto contraste, redução de movimento), VLibras, TutorIA, Mentoria, FAQ, financeiro e avaliação de professores.
+
+- Tela de carregamento com a logo (avisa quando o servidor gratuito está acordando) e tela "Sem conexão" com o botão **Tentar novamente**.
+- Botão Voltar do Android navega pelo histórico da interface Web; na primeira tela, fecha o app.
+- Links para outros sites abrem no navegador do celular; somente HTTPS.
+- `AppConfig.BaseUrl` concentra o endereço (usado pela WebView e pelo `HttpClient`).
+- Ícone e tela de abertura usam a estrela do TutorClass sobre o verde da marca.
+- As telas nativas anteriores (Login, Home, Professores etc.) e seus ViewModels/serviços continuam no projeto, com seus testes, mas não são mais a tela inicial.
+- A sessão (JWT) fica na memória da página Web, como no navegador: ao fechar o app é preciso entrar novamente.

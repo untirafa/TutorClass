@@ -18,8 +18,7 @@ public static class PrototypeElements
     {
         var button = new Button { Text = text, AutomationId = id, HorizontalOptions = LayoutOptions.Fill,
             BackgroundColor = Color.FromArgb("#E7EFFF"), TextColor = Color.FromArgb("#174BB8"),
-            FontAttributes = FontAttributes.Bold, CornerRadius = 14, HeightRequest = 54,
-            HorizontalTextAlignment = TextAlignment.Start };
+            FontAttributes = FontAttributes.Bold, CornerRadius = 14, HeightRequest = 54 };
         button.Clicked += async (_, _) => await action();
         return button;
     }

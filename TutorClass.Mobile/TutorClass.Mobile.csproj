@@ -16,8 +16,8 @@
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
   </PropertyGroup>
   <ItemGroup>
-    <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.svg" Color="#125C50" />
-    <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#125C50" BaseSize="128,128" />
+    <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.png" Color="#125C50" />
+    <MauiSplashScreen Include="Resources/Splash/splash.png" Color="#125C50" BaseSize="256,256" />
     <MauiFont Include="Resources/Fonts/*" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.20" />
   </ItemGroup>

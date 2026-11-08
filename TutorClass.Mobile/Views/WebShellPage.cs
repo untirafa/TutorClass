@@ -6,7 +6,7 @@ namespace TutorClass.Mobile.Views;
 /// </summary>
 public sealed class WebShellPage : ContentPage
 {
-    private static readonly Color Verde = Color.FromArgb("#125C50");
+    private static readonly Color Verde = Color.FromArgb("#1C4F96");
     private readonly WebView web;
     private readonly Grid loading;
     private readonly Label loadingText;

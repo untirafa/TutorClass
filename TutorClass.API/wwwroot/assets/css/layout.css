@@ -197,3 +197,6 @@ body.in-app .bg-video-toggle { bottom: calc(4.5rem + env(safe-area-inset-bottom)
 @media (min-width: 64em) { .hero-inner, .hero-inner[class] { grid-template-columns: minmax(0, 52rem); } }
 /* Áreas logadas (aluno, professor, responsável e administrador): sem vídeo */
 body.in-app .bg-video, body.in-app .bg-video-toggle { display: none; }
+
+/* VLibras: acima dos demais elementos fixos do site */
+[vw] { z-index: 70; }

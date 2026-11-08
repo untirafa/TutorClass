@@ -20,6 +20,8 @@ O TutorClass adota a WCAG 2.2 nível AA, prevista na documentação do projeto (
 | 4.1.2 / 4.1.3 Nome, função e mensagens | Regiões `aria-live` (polida/assertiva), `aria-busy` na resposta em streaming da TutorIA |
 | Preferências | Painel "Acessibilidade": tema claro/escuro/automático, alto contraste, tamanho do texto, reduzir movimento (salvas em `localStorage`; nenhum dado pessoal) |
 
+- **VLibras:** o widget oficial do Governo Federal (tradução para Libras) está em todas as telas, carregado de `vlibras.gov.br`. Se o serviço estiver fora do ar, o site segue normal. Os testes automatizados não o carregam.
+
 ## Verificação
 
 Automatizada com axe-core (regras WCAG 2.0/2.1/2.2 A e AA e boas práticas) via `npm run audit:a11y`, em desktop, 320 px, tema escuro e alto contraste, nas telas públicas e de cada perfil: **0 violações**.

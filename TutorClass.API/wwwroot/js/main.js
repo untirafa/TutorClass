@@ -12,9 +12,11 @@ import { closeActiveDialog } from './ui/dialog.js';
 import { loading, errorState } from './ui/components.js';
 
 import { setupBackgroundVideo } from './ui/bgVideo.js';
+import { setupVLibras } from './ui/vlibras.js';
 
 loadPrefs();
 setupBackgroundVideo();
+setupVLibras();
 
 // Mantém a hierarquia de títulos sem saltos (1.3.1): títulos de cartão assumem o nível seguinte ao título anterior.
 function fixHeadings(root) {

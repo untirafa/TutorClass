@@ -24,6 +24,7 @@ async function login(email) {
   ok('aluno: botão de agendamento', await book.count() > 0);
   if (await book.count()) { await book.click(); ok('aluno: diálogo de agendamento', await page.locator('dialog[open]').count() === 1);
     await page.keyboard.press('Escape'); ok('aluno: Esc fecha diálogo', await page.locator('dialog[open]').count() === 0); }
+  ok('VLibras presente na tela', await page.locator('[vw] [vw-access-button]').count() === 1);
   // Avaliação do professor: botão no cartão da aula concluída e no perfil do professor
   await page.goto(base + '/#app/aulas'); await page.getByRole('button', { name: /avaliar professor/i }).first().waitFor({ timeout: 5000 }).catch(() => {});
   ok('aluno: botão Avaliar professor na aula concluída', await page.getByRole('button', { name: /avaliar professor/i }).count() > 0);

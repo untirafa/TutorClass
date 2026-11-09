@@ -16,6 +16,8 @@ public static class MauiProgram
             settings.MediaPlaybackRequiresUserGesture = false;
             settings.MixedContentMode = Android.Webkit.MixedContentHandling.NeverAllow;
             settings.SetSupportMultipleWindows(false);
+            // Permite ao site saber que está dentro do aplicativo (e esconder o convite para baixá-lo).
+            settings.UserAgentString = (settings.UserAgentString ?? "") + " TutorClassApp";
         });
 #endif
         builder.UseMauiApp<App>()

@@ -5,6 +5,7 @@ import { announce } from '../core/a11y.js';
 import { pageHeader, loading, emptyState, errorState, link } from '../ui/components.js';
 import { createForm, field } from '../ui/form.js';
 import { faqItem } from './shared.js';
+import { appInstallGuide } from '../ui/appDownload.js';
 
 export const FAQ_CATEGORIES = ['Conta', 'Aulas', 'Professores', 'Pagamentos', 'Planos', 'Mentoria', 'TutorIA', 'Gravacoes'];
 const catLabel = (c) => (c === 'Gravacoes' ? 'Gravações' : c);
@@ -39,7 +40,8 @@ async function build(ctx) {
   const wrap = h('div', { class: 'stack' },
     h('section', { class: 'stack', 'aria-labelledby': 'faq-s' }, h('h2', { id: 'faq-s' }, 'Perguntas frequentes'), form.el, results),
     h('section', { class: 'stack', 'aria-labelledby': 'faq-a' }, h('h2', { id: 'faq-a' }, 'Assistente de ajuda'),
-      h('p', { class: 'muted' }, 'Descreva sua dúvida sobre contas, aulas, planos ou pagamentos. O assistente consulta as perguntas frequentes cadastradas.'), chat.el, answer));
+      h('p', { class: 'muted' }, 'Descreva sua dúvida sobre contas, aulas, planos ou pagamentos. O assistente consulta as perguntas frequentes cadastradas.'), chat.el, answer),
+    appInstallGuide());
   mount(ctx.host, wrap);
   if (ctx.query?.termo) { form.controls.termo.value = ctx.query.termo; }
   await search({ termo: ctx.query?.termo });

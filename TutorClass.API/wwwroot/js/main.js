@@ -13,10 +13,12 @@ import { loading, errorState } from './ui/components.js';
 
 import { setupBackgroundVideo } from './ui/bgVideo.js';
 import { setupVLibras } from './ui/vlibras.js';
+import { isNativeApp } from './ui/appDownload.js';
 
 loadPrefs();
 setupBackgroundVideo();
 setupVLibras();
+if (isNativeApp()) document.body.classList.add('native-app');
 
 // Mantém a hierarquia de títulos sem saltos (1.3.1): títulos de cartão assumem o nível seguinte ao título anterior.
 function fixHeadings(root) {

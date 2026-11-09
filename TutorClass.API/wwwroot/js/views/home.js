@@ -4,6 +4,7 @@ import { isSignedIn } from '../core/session.js';
 import { teacherCard, reviewCard, faqItem, planCard, PLANS } from './shared.js';
 import { loading, emptyState, linkButton, link } from '../ui/components.js';
 import { createForm, field } from '../ui/form.js';
+import { appBand } from '../ui/appDownload.js';
 
 const settled = (r, fallback) => (r.status === 'fulfilled' ? r.value : fallback);
 
@@ -76,7 +77,7 @@ export default async function home(ctx) {
       : faq.length ? h('div', { class: 'stack-sm' }, faq.slice(0, 4).map(faqItem)) : emptyState('Nenhuma pergunta cadastrada ainda.'),
     link('Ver a central de ajuda →', '#ajuda'));
 
-  mount(ctx.host, hero, how, features, about, featuredSection, reviewsSection, plans, cta, faqSection);
+  mount(ctx.host, hero, how, features, about, featuredSection, reviewsSection, plans, appBand(), cta, faqSection);
 
   // Avaliações recentes: agregadas dos professores mais bem avaliados.
   try {

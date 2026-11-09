@@ -61,6 +61,7 @@
 .drawer-nav a[aria-current="page"] { background: var(--primary-soft); color: var(--primary-ink); }
 
 /* ---- Rodapé ---- */
+.native-app .web-only { display: none !important; }
 .site-footer { background: var(--surface); border-top: 1px solid var(--line); padding-block: var(--space-6); }
 .footer-grid { display: grid; gap: var(--space-5); }
 .footer-grid h2 { font-size: 1rem; font-family: var(--font-body); }

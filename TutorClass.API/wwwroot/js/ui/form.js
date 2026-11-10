@@ -105,6 +105,11 @@ export function createForm({ fields, values = {}, submit = 'Salvar', onSubmit, o
           hintId ? h('p', { class: 'hint', id: hintId }, f.help) : null, f.type === 'password' ? passwordBox(control, f.label) : control, live, err);
     wrappers[f.name] = wrap;
     control.addEventListener('input', () => setFieldError(f.name, ''));
+    if (f.type === 'date') {
+      // Ano com no máximo 4 dígitos (dd/mm/aaaa) e conferência imediata ao sair do campo (data futura, antiga demais etc.).
+      control.addEventListener('input', () => { const m = /^\+?(\d{4})\d+(-\d\d-\d\d)$/.exec(control.value); if (m) control.value = m[1] + m[2]; });
+      control.addEventListener('blur', () => { if (control.value) { const msg = messageFor(control, f); setFieldError(f.name, msg); if (msg) announce(msg, { urgent: true }); } });
+    }
     form.append(wrap);
   }
 

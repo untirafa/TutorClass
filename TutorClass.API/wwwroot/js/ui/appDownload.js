@@ -29,3 +29,19 @@ export function appInstallGuide() {
       h('li', null, 'Abra o TutorClass e entre com a sua conta. O app precisa de internet.')),
     h('p', null, downloadLink('Baixar o app Android', 'btn primary')));
 }
+
+// Faixa fixa no topo das páginas públicas, para quem acessa pelo navegador (não aparece no app nem no iPhone/iPad).
+const STRIP_KEY = 'tc-app-strip-fechada';
+const isIos = () => /iPhone|iPad|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export function setupAppStrip() {
+  if (isNativeApp() || isIos()) return;
+  try { if (localStorage.getItem(STRIP_KEY)) return; } catch { /* sem armazenamento: mostra sempre */ }
+  const header = document.getElementById('site-header');
+  if (!header) return;
+  const close = h('button', { type: 'button', class: 'app-strip-close', 'aria-label': 'Fechar o aviso do aplicativo' }, '×');
+  const strip = h('div', { class: 'app-strip', role: 'region', 'aria-label': 'Aplicativo Android' }, h('div', { class: 'container app-strip-inner' },
+    h('p', null, h('strong', null, 'App para Android')),
+    downloadLink('Baixar o app', 'btn'), close));
+  close.addEventListener('click', () => { strip.remove(); try { localStorage.setItem(STRIP_KEY, '1'); } catch { /* ignora */ } });
+  header.before(strip);
+}

@@ -9,12 +9,19 @@ import { link } from '../ui/components.js';
 
 const EMAIL = field('email', 'E-mail', 'email', { autocomplete: 'username', maxLength: 254 });
 const NAME = field('nome', 'Nome completo', 'text', { autocomplete: 'name', maxLength: 150 });
-const NEW_PASSWORD = field('senha', 'Senha', 'password', { autocomplete: 'new-password', minLength: 8, help: 'Use ao menos 8 caracteres.' });
+// Data de nascimento: não pode ser futura nem anterior a 120 anos. A API repete a mesma validação.
+const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const yearsAgo = (n) => { const d = new Date(); d.setFullYear(d.getFullYear() - n); return isoDay(d); };
+const checkBirth = (v) => v > isoDay(new Date()) ? 'A data de nascimento não pode ser futura.' : v < yearsAgo(120) ? 'Informe uma data de nascimento válida.' : '';
+// Senha nova: 8 caracteres ou mais, com letra, número e caractere especial. A API repete a mesma regra.
+const passwordMissing = (v) => [v.length < 8 && 'ao menos 8 caracteres', !/\p{L}/u.test(v) && 'uma letra', !/\d/.test(v) && 'um número', !/[^\p{L}\d\s]/u.test(v) && 'um caractere especial (como ! @ # $ %)'].filter(Boolean);
+const checkPassword = (v) => { const m = passwordMissing(v); return m.length ? `A senha precisa ter ${m.join(', ')}.` : ''; };
+const NEW_PASSWORD = field('senha', 'Senha', 'password', { autocomplete: 'new-password', minLength: 8, validate: checkPassword, help: 'Use ao menos 8 caracteres, com letra, número e caractere especial (como ! @ # $ %).' });
 
 const KINDS = {
   'cadastro-aluno': {
     kind: 'aluno', title: 'Criar conta de aluno', lead: 'Seu próximo passo começa aqui.', submit: 'Criar minha conta',
-    fields: [NAME, EMAIL, field('dataNascimento', 'Data de nascimento', 'date', { required: false, help: 'Opcional. Alunos menores de 18 anos não têm acesso à área financeira; um responsável cuida dos pagamentos.', autocomplete: 'bday' }), NEW_PASSWORD],
+    fields: [NAME, EMAIL, field('dataNascimento', 'Data de nascimento', 'date', { required: false, help: 'Opcional. Alunos menores de 18 anos não têm acesso à área financeira; um responsável cuida dos pagamentos.', autocomplete: 'bday', max: isoDay(new Date()), min: yearsAgo(120), validate: checkBirth }), NEW_PASSWORD],
     body: (v) => ({ nome: v.nome, email: v.email, senha: v.senha, dataNascimento: v.dataNascimento || null })
   },
   'cadastro-professor': {

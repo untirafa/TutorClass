@@ -26,6 +26,7 @@ public sealed class AuthService
     public async Task<UsuarioAutenticadoDto> RegistrarAlunoAsync(RegistrarAlunoRequest request, CancellationToken cancellationToken)
     {
         EnsurePasswordIsValid(request.Senha);
+        EnsureBirthDateIsValid(request.DataNascimento);
         var email = NormalizeEmail(request.Email);
         EnsureEmailIsUnique(email);
 
@@ -97,11 +98,31 @@ public sealed class AuthService
         }
     }
 
+    private static void EnsureBirthDateIsValid(DateOnly? dataNascimento)
+    {
+        if (dataNascimento is null) return;
+        // Data de hoje em Brasilia (UTC-3), para nao recusar quem nasceu hoje nem aceitar datas futuras.
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3));
+        if (dataNascimento.Value > hoje)
+        {
+            throw new DomainException("Data de nascimento nao pode ser futura.");
+        }
+        if (dataNascimento.Value < hoje.AddYears(-120))
+        {
+            throw new DomainException("Data de nascimento invalida.");
+        }
+    }
+
     private static void EnsurePasswordIsValid(string senha)
     {
         if (string.IsNullOrWhiteSpace(senha) || senha.Length < 8)
         {
             throw new DomainException("Senha deve possuir pelo menos 8 caracteres.");
+        }
+        // Politica minima de senha: ao menos uma letra, um numero e um caractere especial.
+        if (!senha.Any(char.IsLetter) || !senha.Any(char.IsDigit) || !senha.Any(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c)))
+        {
+            throw new DomainException("Senha deve possuir pelo menos 8 caracteres, com letra, numero e caractere especial.");
         }
     }
 

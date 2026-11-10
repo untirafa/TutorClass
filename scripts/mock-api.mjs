@@ -77,7 +77,7 @@ async function api(req, res, url) {
   if (p === '/api/auth/me') { if (!need()) return; return send(res, 200, me); }
   if (p.startsWith('/api/auth/registrar/') && m === 'POST') {
     if (users.some(u => u.email === b.email)) return bad(res, 'Email ja cadastrado.');
-    if (!b.senha || b.senha.length < 8) return send(res, 400, { title: 'Validação', errors: { Senha: ['A senha deve ter ao menos 8 caracteres.'] } });
+    if (!b.senha || b.senha.length < 8 || !/\p{L}/u.test(b.senha) || !/\d/.test(b.senha) || !/[^\p{L}\d\s]/u.test(b.senha)) return send(res, 400, { title: 'Validação', errors: { Senha: ['A senha deve ter ao menos 8 caracteres.'] } });
     const perfil = { aluno: 'Aluno', professor: 'Professor', responsavel: 'Responsavel' }[seg[3]];
     const u = { id: id(), nome: b.nome, email: b.email, perfil, ...(perfil === 'Aluno' ? { dataNascimento: b.dataNascimento ?? null } : {}) }; users.push(u); return send(res, 201, u);
   }

@@ -77,7 +77,7 @@ export default async function home(ctx) {
       : faq.length ? h('div', { class: 'stack-sm' }, faq.slice(0, 4).map(faqItem)) : emptyState('Nenhuma pergunta cadastrada ainda.'),
     link('Ver a central de ajuda →', '#ajuda'));
 
-  mount(ctx.host, hero, how, features, about, featuredSection, reviewsSection, plans, appBand(), cta, faqSection);
+  mount(ctx.host, hero, appBand(), how, features, about, featuredSection, reviewsSection, plans, cta, faqSection);
 
   // Avaliações recentes: agregadas dos professores mais bem avaliados.
   try {

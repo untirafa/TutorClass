@@ -1927,3 +1927,63 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261111140000_AdicionaDenunciasModeracao') THEN
+    CREATE TABLE denuncias (
+        id uuid NOT NULL,
+        denunciante_id uuid NOT NULL,
+        alvo_usuario_id uuid NOT NULL,
+        tipo_alvo character varying(30) NOT NULL,
+        alvo_id character varying(64) NOT NULL,
+        motivo character varying(40) NOT NULL,
+        descricao character varying(500),
+        resumo_alvo character varying(500) NOT NULL,
+        vinculo_mentoria_id uuid,
+        status character varying(20) NOT NULL,
+        sancao character varying(20) NOT NULL,
+        observacao_moderacao character varying(500),
+        analisada_por_id uuid,
+        analisada_em_utc timestamp with time zone,
+        conta_reativada_em_utc timestamp with time zone,
+        created_at_utc timestamp with time zone NOT NULL,
+        updated_at_utc timestamp with time zone,
+        CONSTRAINT pk_denuncias PRIMARY KEY (id),
+        CONSTRAINT fk_denuncias_usuarios_alvo_usuario_id FOREIGN KEY (alvo_usuario_id) REFERENCES usuarios (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_denuncias_usuarios_denunciante_id FOREIGN KEY (denunciante_id) REFERENCES usuarios (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261111140000_AdicionaDenunciasModeracao') THEN
+    CREATE INDEX ix_denuncias_alvo_usuario_id ON denuncias (alvo_usuario_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261111140000_AdicionaDenunciasModeracao') THEN
+    CREATE INDEX ix_denuncias_denunciante_id_tipo_alvo_alvo_id ON denuncias (denunciante_id, tipo_alvo, alvo_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261111140000_AdicionaDenunciasModeracao') THEN
+    CREATE INDEX ix_denuncias_status_created_at_utc ON denuncias (status, created_at_utc);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261111140000_AdicionaDenunciasModeracao') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261111140000_AdicionaDenunciasModeracao', '10.0.4');
+    END IF;
+END $EF$;
+
+COMMIT;

@@ -58,6 +58,7 @@ let plan = { planoAtual: 'Gratuito', assinaturaAtiva: false, possuiIaEducacional
 if (process.env.MOCK_PLAN === 'Mentoria') plan = { ...plan, planoAtual: 'Mentoria', assinaturaAtiva: true, possuiIaEducacional: true, possuiMentoria: true, possuiGravacoesElegiveis: true };
 let iaUsed = 0;
 const sessions = new Map();
+const reports = []; // denúncias da sessão de demonstração
 
 const send = (res, status, data, type = 'application/json') => { res.writeHead(status, { 'Content-Type': type + '; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(data == null ? '' : typeof data === 'string' ? data : JSON.stringify(data)); };
 const bad = (res, error, status = 400) => send(res, status, { error });
@@ -166,6 +167,34 @@ async function api(req, res, url) {
   if (p === '/api/admin/faq' && m === 'POST') { const f = { ...b, id: id(), ativo: true }; faq.push(f); return send(res, 201, f); }
   if (m === 'DELETE' && (r = p.match(/^\/api\/admin\/faq\/([^/]+)$/))) { const i = faq.findIndex(x => x.id === r[1]); if (i < 0) return bad(res, 'FAQ nao encontrado.'); faq.splice(i, 1); res.writeHead(204); return res.end(); }
   if ((r = p.match(/^\/api\/admin\/faq\/([^/]+)(?:\/(ativar|desativar))?$/))) { const f = faq.find(x => x.id === r[1]); if (r[2]) f.ativo = r[2] === 'ativar'; else Object.assign(f, b); return send(res, 200, f); }
+  // --- denúncias e moderação
+  if (p === '/api/denuncias' && m === 'POST') {
+    if (!need()) return;
+    if (!['Professor', 'Avaliacao', 'Mensagem'].includes(b.tipo) || !b.alvoId) return bad(res, 'Conteudo denunciado e obrigatorio.');
+    if (b.motivo === 'Outro' && (b.descricao || '').trim().length < 10) return bad(res, 'Para o motivo "Outro", descreva o ocorrido com pelo menos 10 caracteres.');
+    if (reports.some(d => d.denuncianteId === me.id && d.tipo === b.tipo && d.alvoId === b.alvoId && ['Aberta', 'EmAnalise'].includes(d.status))) return bad(res, 'Voce ja denunciou este conteudo e a denuncia esta em analise.');
+    const alvo = b.tipo === 'Professor' ? teachers.find(t => t.id === b.alvoId) : b.tipo === 'Avaliacao' ? reviews.find(x => x.id === b.alvoId) : messages.find(x => x.id === b.alvoId);
+    if (!alvo) return bad(res, 'Conteudo denunciado nao encontrado.');
+    const resumo = b.tipo === 'Professor' ? `Perfil do professor ${alvo.nome}` : b.tipo === 'Avaliacao' ? `Avaliacao ${alvo.nota}/5: ${alvo.comentario || '(sem comentario)'}` : `Mensagem na Mentoria: ${alvo.conteudo}`;
+    const d = { id: id(), tipo: b.tipo, alvoId: b.alvoId, motivo: b.motivo, descricao: b.descricao || null, resumo, status: 'Aberta', sancao: 'Nenhuma', observacao: null, denuncianteId: me.id, denunciante: me.nome, alvoUsuarioId: alvo.remetenteUsuarioId || alvo.alunoId || alvo.id, alvoUsuario: alvo.remetenteNome || alvo.aluno || alvo.nome || 'Usuario', alvoPerfil: b.tipo === 'Professor' ? 'Professor' : b.tipo === 'Avaliacao' ? 'Aluno' : 'Professor', alvoAtivo: true, criadaEmUtc: iso(Date.now()), analisadaEmUtc: null, contaReativadaEmUtc: null };
+    reports.push(d); return send(res, 201, d);
+  }
+  if (p === '/api/denuncias/minhas') { if (!need()) return; return send(res, 200, reports.filter(d => d.denuncianteId === me.id)); }
+  if (p === '/api/admin/denuncias/resumo') { if (!need('Administrador')) return; const c = (st) => reports.filter(d => d.status === st).length; return send(res, 200, { abertas: c('Aberta'), emAnalise: c('EmAnalise'), procedentes: c('Procedente'), improcedentes: c('Improcedente') }); }
+  if (p === '/api/admin/denuncias' && m === 'GET') { if (!need('Administrador')) return; const st = q.get('status'); return send(res, 200, reports.filter(d => !st || d.status === st).map(d => ({ ...d, denunciasContraAlvo: reports.filter(x => x.alvoUsuarioId === d.alvoUsuarioId).length }))); }
+  if ((r = p.match(/^\/api\/admin\/denuncias\/([^/]+)\/(iniciar-analise|decidir|reativar-conta)$/)) && m === 'POST') {
+    if (!need('Administrador')) return;
+    const d = reports.find(x => x.id === r[1]); if (!d) return bad(res, 'Denuncia nao encontrada.');
+    if (r[2] === 'iniciar-analise') { if (['Procedente', 'Improcedente'].includes(d.status)) return bad(res, 'Esta denuncia ja foi decidida.'); d.status = 'EmAnalise'; }
+    else if (r[2] === 'decidir') {
+      if (['Procedente', 'Improcedente'].includes(d.status)) return bad(res, 'Esta denuncia ja foi decidida.');
+      if (!b.observacao || b.observacao.trim().length < 3) return bad(res, 'Informe a justificativa da decisao (pelo menos 3 caracteres).');
+      if (!b.procedente && b.sancao !== 'Nenhuma') return bad(res, 'Denuncia improcedente nao pode ter sancao.');
+      d.status = b.procedente ? 'Procedente' : 'Improcedente'; d.sancao = b.procedente ? b.sancao : 'Nenhuma'; d.observacao = b.observacao; d.analisadaEmUtc = iso(Date.now());
+      if (d.sancao === 'Suspensao') reports.filter(x => x.alvoUsuarioId === d.alvoUsuarioId).forEach(x => x.alvoAtivo = false);
+    } else { if (d.sancao !== 'Suspensao' || d.contaReativadaEmUtc) return bad(res, 'Somente denuncias com suspensao aplicada permitem reativar a conta.'); d.contaReativadaEmUtc = iso(Date.now()); reports.filter(x => x.alvoUsuarioId === d.alvoUsuarioId).forEach(x => x.alvoAtivo = true); }
+    return send(res, 200, { ...d, denunciasContraAlvo: reports.filter(x => x.alvoUsuarioId === d.alvoUsuarioId).length });
+  }
   return bad(res, 'Registro ou endpoint não encontrado.', 404);
 }
 function S0(mid) { return subjects.find(s => s.id === mid)?.nome; }

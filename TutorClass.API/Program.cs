@@ -86,6 +86,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         options.Events = new JwtBearerEvents
         {
+            // Conta suspensa pela moderacao perde o acesso imediatamente, sem esperar o token expirar.
+            OnTokenValidated = context =>
+            {
+                var userIdClaim = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (Guid.TryParse(userIdClaim, out var userId))
+                {
+                    var db = context.HttpContext.RequestServices.GetRequiredService<IApplicationDbContext>();
+                    var ativo = db.Usuarios.Where(u => u.Id == userId).Select(u => (bool?)u.Ativo).FirstOrDefault();
+                    if (ativo == false)
+                    {
+                        context.Fail("Conta suspensa.");
+                    }
+                }
+
+                return Task.CompletedTask;
+            },
             OnMessageReceived = context =>
             {
                 var accessToken = context.Request.Query["access_token"];
@@ -127,6 +143,18 @@ if (useLocalDatabase)
     var database = scope.ServiceProvider.GetRequiredService<TutorClassDbContext>();
     // PostgreSQL migrations remain exclusive to PostgreSQL. This is a separate local database.
     await database.Database.EnsureCreatedAsync();
+    // EnsureCreated nao altera um banco local que ja existe: cria a tabela de denuncias se ela ainda nao estiver la.
+    await database.Database.ExecuteSqlRawAsync("""
+        CREATE TABLE IF NOT EXISTS denuncias (
+            id TEXT NOT NULL CONSTRAINT pk_denuncias PRIMARY KEY,
+            denunciante_id TEXT NOT NULL, alvo_usuario_id TEXT NOT NULL, tipo_alvo TEXT NOT NULL, alvo_id TEXT NOT NULL,
+            motivo TEXT NOT NULL, descricao TEXT NULL, resumo_alvo TEXT NOT NULL, vinculo_mentoria_id TEXT NULL,
+            status TEXT NOT NULL, sancao TEXT NOT NULL, observacao_moderacao TEXT NULL, analisada_por_id TEXT NULL,
+            analisada_em_utc TEXT NULL, conta_reativada_em_utc TEXT NULL, created_at_utc TEXT NOT NULL, updated_at_utc TEXT NULL);
+        CREATE INDEX IF NOT EXISTS ix_denuncias_alvo_usuario_id ON denuncias (alvo_usuario_id);
+        CREATE INDEX IF NOT EXISTS ix_denuncias_denunciante_id_tipo_alvo_alvo_id ON denuncias (denunciante_id, tipo_alvo, alvo_id);
+        CREATE INDEX IF NOT EXISTS ix_denuncias_status_created_at_utc ON denuncias (status, created_at_utc);
+        """);
     app.Logger.LogInformation("Desenvolvimento: banco SQLite local em .local/tutorclass.db. As contas persistem ao reiniciar a API.");
 }
 

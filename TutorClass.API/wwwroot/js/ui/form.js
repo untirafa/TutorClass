@@ -23,7 +23,7 @@ function buildControl(f, id, describedBy, value) {
   if (f.type === 'checkbox') control.checked = !!value;
   else control.value = value ?? f.value ?? (f.options ? (typeof f.options[0] === 'object' ? f.options[0].value : f.options[0]) : '');
   if (describedBy.length) control.setAttribute('aria-describedby', describedBy.join(' '));
-  if (f.required !== false && f.type !== 'checkbox') control.setAttribute('aria-required', 'true');
+  if ((f.required !== false && f.type !== 'checkbox') || f.mustCheck) control.setAttribute('aria-required', 'true');
   if (f.disabled) control.disabled = true;
   return control;
 }
@@ -44,6 +44,8 @@ function passwordBox(control, label) {
 }
 
 export function messageFor(control, f) {
+  // Caixa de aceite obrigatória (f.mustCheck): precisa estar marcada.
+  if (f.type === 'checkbox') return f.mustCheck && !control.checked ? (f.mustCheckMessage || `Marque a opção “${f.label}”.`) : '';
   const v = control.type === 'checkbox' ? control.checked : String(control.value ?? '').trim();
   if (f.type !== 'checkbox' && f.required !== false && v === '') return `Preencha o campo “${f.label}”.`;
   if (v === '' || f.type === 'checkbox') return '';
@@ -99,7 +101,7 @@ export function createForm({ fields, values = {}, submit = 'Salvar', onSubmit, o
     }
     const wrap = f.type === 'checkbox'
       ? h('div', { class: 'field field-check', dataset: { name: f.name } },
-          control, h('label', { for: id }, f.label), hintId ? h('p', { class: 'hint', id: hintId }, f.help) : null, err)
+          control, h('label', { for: id }, f.labelNode || f.label), hintId ? h('p', { class: 'hint', id: hintId }, f.help) : null, err)
       : h('div', { class: 'field', dataset: { name: f.name } },
           h('label', { for: id }, f.label, opt),
           hintId ? h('p', { class: 'hint', id: hintId }, f.help) : null, f.type === 'password' ? passwordBox(control, f.label) : control, live, err);

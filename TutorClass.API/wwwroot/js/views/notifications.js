@@ -11,6 +11,10 @@ import { notice } from '../ui/toast.js';
 const MAP = [['aula', 'aulas'], ['material', 'materiais'], ['mentoria', 'mentoria'], ['plano', 'planos'], ['assinatura', 'planos'], ['financeiro', 'financeiro'], ['pagamento', 'financeiro'], ['candidatura', 'profissional'], ['qualific', 'profissional'], ['gravac', 'gravacoes']];
 export function notificationRoute(route) {
   if (!route) return null;
+  const text = String(route).toLowerCase();
+  if (text.includes('regras-de-convivencia')) return '#regras-de-convivencia';
+  if (text.includes('moderacao')) return '#app/moderacao';
+  if (text.includes('minhas-denuncias')) return '#app/denuncias';
   const target = MAP.find(([m]) => String(route).toLowerCase().includes(m));
   if (!target) return null;
   if (role() === 'Responsavel') return '#app/vinculados';

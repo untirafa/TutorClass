@@ -36,10 +36,11 @@ export function teacherCard(p) {
     h('div', { class: 'actions' }, linkButton('Ver perfil', teacherHref(p.id), 'secondary')));
 }
 
-export function reviewCard(r) {
+export function reviewCard(r, extra = null) {
   return h('article', { class: 'card' }, stars(r.nota),
     h('p', null, r.comentario || 'Avaliação sem comentário.'),
-    h('p', { class: 'small muted' }, `${r.aluno || 'Aluno'} · ${when(r.createdAtUtc)}`));
+    h('p', { class: 'small muted' }, `${r.aluno || 'Aluno'} · ${when(r.createdAtUtc)}`),
+    extra ? h('div', { class: 'actions' }, extra) : null);
 }
 
 export function faqItem(item) {

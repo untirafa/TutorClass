@@ -149,6 +149,7 @@
 .msg.own { align-self: flex-end; background: var(--primary-soft); border-color: var(--primary); }
 .msg > strong { display: block; font-size: .85rem; }
 .msg small { color: var(--muted); display: block; margin-top: .25rem; }
+.msg .btn { margin-top: .25rem; font-size: .85rem; min-height: 2.75rem; }
 .msg-body > :first-child { margin-top: 0; } .msg-body > :last-child { margin-bottom: 0; }
 .msg-note { font-style: italic; }
 

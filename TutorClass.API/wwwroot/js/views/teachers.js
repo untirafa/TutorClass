@@ -8,6 +8,7 @@ import { pageHeader, pagedList, loading, errorState, emptyState, tabs, stars, ba
 import { createForm, field } from '../ui/form.js';
 import { openDialog } from '../ui/dialog.js';
 import { notice } from '../ui/toast.js';
+import { reportButton } from '../ui/report.js';
 import { rateLesson } from './lessons.js';
 import { teacherCard, reviewCard, qualificationCard, weeklySlotText, subjectOptions, inApp } from './shared.js';
 
@@ -167,7 +168,8 @@ async function renderProfile(ctx) {
     h('div', null, h('h1', { tabindex: '-1' }, profile.nome),
       h('p', null, badge(`Reputação: ${profile.nivelReputacao}`, 'neutral'), ' ',
         profile.quantidadeAvaliacoes > 0 ? [stars(profile.mediaAvaliacoes, profile.quantidadeAvaliacoes), ` ${Number(profile.mediaAvaliacoes).toFixed(1).replace('.', ',')} (${profile.quantidadeAvaliacoes})`] : 'Ainda sem avaliações',
-        profile.ofereceMentoria ? [' ', badge('Oferece mentoria', 'ok')] : null)));
+        profile.ofereceMentoria ? [' ', badge('Oferece mentoria', 'ok')] : null),
+      profile.id !== session.user?.id ? reportButton({ tipo: 'Professor', alvoId: profile.id, alvoNome: `o perfil de ${profile.nome}` }, 'Denunciar perfil') : null));
 
   const sobre = () => h('div', { class: 'stack' }, h('p', { style: 'white-space: pre-wrap' }, profile.biografia || 'Este professor ainda não escreveu uma apresentação.'),
     dl({ 'Preço por hora': money(profile.precoHora), 'Aulas concluídas': profile.aulasConcluidas, 'Oferece mentoria': profile.ofereceMentoria ? `Sim (até ${profile.limiteMentorados} mentorados)` : 'Não', 'Avaliações': profile.textoAvaliacoes }),
@@ -188,7 +190,7 @@ async function renderProfile(ctx) {
     }).catch(() => box.replaceChildren());
     return box;
   };
-  const avaliacoes = () => h('div', { class: 'stack' }, rateBox(), reviews.length ? h('div', { class: 'grid cards' }, reviews.map(reviewCard)) : emptyState('Nenhuma avaliação publicada.'));
+  const avaliacoes = () => h('div', { class: 'stack' }, rateBox(), reviews.length ? h('div', { class: 'grid cards' }, reviews.map(r => reviewCard(r, r.alunoId !== session.user?.id ? reportButton({ tipo: 'Avaliacao', alvoId: r.id, alvoNome: `a avaliação de ${r.aluno || 'aluno'}` }, 'Denunciar avaliação') : null))) : emptyState('Nenhuma avaliação publicada.'));
   const agenda = () => h('div', { class: 'stack' },
     h('h2', 'Disponibilidade semanal'),
     (profile.disponibilidades || []).length ? h('ul', null, profile.disponibilidades.map(d => h('li', weeklySlotText(d)))) : emptyState('O professor ainda não cadastrou horários.'),

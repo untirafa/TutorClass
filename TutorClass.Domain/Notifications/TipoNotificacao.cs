@@ -13,5 +13,8 @@ public enum TipoNotificacao
     MentorAlterado = 9,
     PagamentoConfirmado = 10,
     AssinaturaConfirmada = 11,
-    NovoMaterial = 12
+    NovoMaterial = 12,
+    NovaDenuncia = 13,
+    DenunciaAtualizada = 14,
+    AdvertenciaModeracao = 15
 }

@@ -8,12 +8,12 @@ import AxeBuilder from '@axe-core/playwright';
 const BASE = process.env.BASE_URL || 'http://localhost:5242';
 const PASS = process.env.TUTORCLASS_PASSWORD || 'Senha@2026';
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
-const PUBLIC = ['home', 'professores', 'materias', 'planos', 'ajuda', 'privacidade', 'acessibilidade', 'login', 'cadastro-aluno', 'cadastro-professor', 'cadastro-responsavel'];
+const PUBLIC = ['home', 'professores', 'materias', 'planos', 'ajuda', 'privacidade', 'politica-de-privacidade', 'termos-de-uso', 'regras-de-convivencia', 'acessibilidade', 'login', 'cadastro-aluno', 'cadastro-professor', 'cadastro-responsavel'];
 const ROLES = {
-  'aluno@teste.dev': ['inicio', 'professores', 'aulas', 'materiais', 'mentoria', 'acompanhamentos', 'tutoria', 'planos', 'gravacoes', 'financeiro', 'notificacoes', 'conta', 'ajuda'],
-  'professor@teste.dev': ['inicio', 'alunos', 'aulas', 'materiais', 'mentoria', 'acompanhamentos', 'financeiro', 'profissional', 'disponibilidade', 'notificacoes'],
-  'responsavel@teste.dev': ['inicio', 'vinculados', 'professores', 'financeiro', 'ajuda', 'notificacoes'],
-  'admin@teste.dev': ['inicio', 'analise', 'indicadores', 'faq-admin']
+  'aluno@teste.dev': ['inicio', 'professores', 'aulas', 'materiais', 'mentoria', 'acompanhamentos', 'tutoria', 'planos', 'gravacoes', 'financeiro', 'denuncias', 'notificacoes', 'conta', 'ajuda'],
+  'professor@teste.dev': ['inicio', 'alunos', 'aulas', 'materiais', 'mentoria', 'acompanhamentos', 'financeiro', 'profissional', 'disponibilidade', 'denuncias', 'notificacoes'],
+  'responsavel@teste.dev': ['inicio', 'vinculados', 'professores', 'financeiro', 'ajuda', 'denuncias', 'notificacoes'],
+  'admin@teste.dev': ['inicio', 'analise', 'moderacao', 'indicadores', 'faq-admin']
 };
 const browser = await chromium.launch();
 const failures = []; let checked = 0;
@@ -52,6 +52,16 @@ for (const [name, opts] of variants) {
     const p2 = await (await context({ ...ctxOpts })).newPage(); if (prefs) await p2.addInitScript((p) => localStorage.setItem('tutorclass.prefs', JSON.stringify(p)), prefs);
     await login(p2, email);
     for (const m of mods) { await p2.goto(`${BASE}/#app/${m}`); await p2.waitForSelector('main h1'); await audit(p2, `${name} · ${email.split('@')[0]} · #app/${m}`); }
+    if (email === 'aluno@teste.dev') {
+      // janela de denúncia (perfil de professor) e fila de moderação com denúncia aberta
+      await p2.goto(`${BASE}/#app/professores`); await p2.waitForSelector('.teacher-card a'); await p2.click('.teacher-card a'); await p2.waitForSelector('.profile-head');
+      await p2.click('.profile-head button:has-text("Denunciar perfil")'); await p2.waitForSelector('dialog[open]'); await audit(p2, `${name} · janela de denúncia`);
+      await p2.click('dialog[open] button[type=submit]'); await p2.waitForTimeout(600); // envia, para a fila do administrador ter o que auditar
+    }
+    if (email === 'admin@teste.dev') {
+      await p2.goto(`${BASE}/#app/moderacao`); await p2.waitForSelector('main h1'); await p2.waitForSelector('article.card'); await audit(p2, `${name} · admin · fila com denúncia`);
+      await p2.click('button:has-text("Decidir")'); await p2.waitForSelector('dialog[open]'); await audit(p2, `${name} · admin · janela de decisão`);
+    }
     await p2.context().close();
   }
   await ctx.close();

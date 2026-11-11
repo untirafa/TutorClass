@@ -44,6 +44,7 @@ const ICONS = {
   play: 'M6 4l14 8-14 8z',
   pause: 'M7 4h4v16H7zM13 4h4v16h-4z',
   wallet: 'M3 7h17a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1zM3 7V5a1 1 0 0 1 1-1h13M16 14h2',
+  flag: 'M5 21V4M5 4h12l-2.5 4L17 12H5',
   bell: 'M6 16V11a6 6 0 1 1 12 0v5l2 2H4zM10 21h4',
   id: 'M3 5h18v14H3zM7 10a2 2 0 1 0 4 0 2 2 0 0 0-4 0M6 16c.5-2 5.5-2 6 0M14 10h4M14 14h4',
   clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',

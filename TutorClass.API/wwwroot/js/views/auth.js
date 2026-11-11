@@ -18,21 +18,29 @@ const passwordMissing = (v) => [v.length < 8 && 'ao menos 8 caracteres', !/\p{L}
 const checkPassword = (v) => { const m = passwordMissing(v); return m.length ? `A senha precisa ter ${m.join(', ')}.` : ''; };
 const NEW_PASSWORD = field('senha', 'Senha', 'password', { autocomplete: 'new-password', minLength: 8, validate: checkPassword, help: 'Use ao menos 8 caracteres, com letra, número e caractere especial (como ! @ # $ %).' });
 
+// Aceite dos Termos de uso e da Política de privacidade (LGPD): obrigatório em todos os cadastros.
+// Os links abrem em outra aba para a pessoa não perder o que já digitou.
+const tab = (href, text) => h('a', { href, target: '_blank', rel: 'noopener' }, text);
+const ACCEPT = field('aceite', 'Li e concordo com os Termos de uso e a Política de privacidade', 'checkbox', {
+  mustCheck: true, mustCheckMessage: 'Para criar a conta, aceite os Termos de uso e a Política de privacidade (LGPD).',
+  labelNode: h('span', null, 'Li e concordo com os ', tab('#termos-de-uso', 'Termos de uso'), ' e com a ', tab('#politica-de-privacidade', 'Política de privacidade (LGPD)'), ' ', h('span', { class: 'muted small' }, '(abrem em outra aba).'))
+});
+
 const KINDS = {
   'cadastro-aluno': {
     kind: 'aluno', title: 'Criar conta de aluno', lead: 'Seu próximo passo começa aqui.', submit: 'Criar minha conta',
-    fields: [NAME, EMAIL, field('dataNascimento', 'Data de nascimento', 'date', { required: false, help: 'Opcional. Alunos menores de 18 anos não têm acesso à área financeira; um responsável cuida dos pagamentos.', autocomplete: 'bday', max: isoDay(new Date()), min: yearsAgo(120), validate: checkBirth }), NEW_PASSWORD],
+    fields: [NAME, EMAIL, field('dataNascimento', 'Data de nascimento', 'date', { required: false, help: 'Opcional. Alunos menores de 18 anos não têm acesso à área financeira; um responsável cuida dos pagamentos.', autocomplete: 'bday', max: isoDay(new Date()), min: yearsAgo(120), validate: checkBirth }), NEW_PASSWORD, ACCEPT],
     body: (v) => ({ nome: v.nome, email: v.email, senha: v.senha, dataNascimento: v.dataNascimento || null })
   },
   'cadastro-professor': {
     kind: 'professor', title: 'Quero ensinar', lead: 'Crie seu perfil. Depois, informe matérias e qualificações e envie sua candidatura para análise.', submit: 'Criar minha conta de professor',
     fields: [NAME, EMAIL, field('biografia', 'Sua apresentação', 'textarea', { maxLength: 2000, help: 'Conte sobre sua experiência e sua forma de ensinar.' }),
-      field('precoHora', 'Preço por hora (R$)', 'number', { min: 0.01, step: 0.01, inputMode: 'decimal' }), NEW_PASSWORD],
+      field('precoHora', 'Preço por hora (R$)', 'number', { min: 0.01, step: 0.01, inputMode: 'decimal' }), NEW_PASSWORD, ACCEPT],
     body: (v) => ({ nome: v.nome, email: v.email, senha: v.senha, biografia: v.biografia, precoHora: Number(v.precoHora) })
   },
   'cadastro-responsavel': {
     kind: 'responsavel', title: 'Cadastro de responsável', lead: 'Acompanhe aulas, pagamentos e a mentoria dos alunos vinculados à sua conta.', submit: 'Criar minha conta de responsável',
-    fields: [NAME, EMAIL, field('telefone', 'Telefone', 'tel', { required: false, autocomplete: 'tel', inputMode: 'tel', help: 'Opcional. Com DDD.' }), NEW_PASSWORD],
+    fields: [NAME, EMAIL, field('telefone', 'Telefone', 'tel', { required: false, autocomplete: 'tel', inputMode: 'tel', help: 'Opcional. Com DDD.' }), NEW_PASSWORD, ACCEPT],
     body: (v) => ({ nome: v.nome, email: v.email, senha: v.senha, telefone: v.telefone || null })
   }
 };

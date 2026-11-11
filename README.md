@@ -409,6 +409,34 @@ Exemplo de criacao administrativa:
 }
 ```
 
+## Denuncias e Moderacao
+
+Pessoas usuarias podem denunciar perfis de professores, avaliacoes e mensagens da Mentoria. A administracao analisa
+cada denuncia, decide e pode aplicar sancoes. Tudo fica na tabela `denuncias` (migration
+`20261111140000_AdicionaDenunciasModeracao`, tambem presente em `database/scripts/TutorClass_Banco.sql`).
+
+Fluxo:
+
+1. Quem esta logado (aluno, responsavel ou professor) usa o botao **Denunciar** no perfil do professor, nas avaliacoes
+   ou nas mensagens da Mentoria (`POST /api/denuncias`). Motivos: `ConteudoOfensivo`, `AssedioOuAmeaca`,
+   `Discriminacao`, `PerfilFalsoOuGolpe`, `DadosPessoais` e `Outro` (este exige descricao com 10+ caracteres).
+2. A API guarda o motivo, a descricao e um **trecho do conteudo denunciado** (para a moderacao nao depender do que
+   foi apagado depois) e avisa os administradores por notificacao interna.
+3. Regras: nao se denuncia a si mesmo nem a propria avaliacao/mensagem; nao e possivel repetir uma denuncia ainda
+   em analise; limite de 10 denuncias por pessoa a cada 24 horas; denunciar mensagem exige participar da Mentoria.
+4. Quem denunciou acompanha em **Minhas denuncias** (`GET /api/denuncias/minhas`) e recebe uma notificacao quando a
+   analise termina. A pessoa denunciada nunca ve quem denunciou, e a justificativa da decisao e interna.
+5. O administrador usa **Moderacao de denuncias** (`/api/admin/denuncias`): `GET` (filtro `status`), `GET resumo`,
+   `POST {id}/iniciar-analise`, `POST {id}/decidir` e `POST {id}/reativar-conta`. Decisao: `procedente` (true/false),
+   `sancao` (`Nenhuma`, `Advertencia` ou `Suspensao`) e `observacao` obrigatoria (3 a 500 caracteres).
+   Improcedente nao admite sancao e contas administradoras nao recebem sancao.
+6. **Advertencia** envia um aviso a pessoa denunciada. **Suspensao** desativa a conta: o login e bloqueado e tokens
+   ja emitidos deixam de valer na proxima requisicao (validacao em `JwtBearerEvents.OnTokenValidated`), ate o
+   administrador reativar a conta.
+
+As regras para as pessoas usuarias ficam na pagina publica `#regras-de-convivencia` (rodape, Privacidade e termos e
+janela de denuncia). Testes: `TutorClass.Tests/DenunciaTests.cs`.
+
 ## Notificacoes Internas
 
 As notificacoes do TutorClass sao internas e persistidas no PostgreSQL. Elas foram pensadas para o sino/central de notificacoes do frontend e sao geradas pelo backend a partir de eventos relevantes de negocio.

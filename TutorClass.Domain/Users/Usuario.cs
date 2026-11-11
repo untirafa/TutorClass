@@ -32,6 +32,12 @@ public abstract class Usuario : Entity
         MarkUpdated();
     }
 
+    public void Reativar()
+    {
+        Ativo = true;
+        MarkUpdated();
+    }
+
     public void DefinirPasswordHash(string passwordHash)
     {
         PasswordHash = Require(passwordHash, nameof(passwordHash));

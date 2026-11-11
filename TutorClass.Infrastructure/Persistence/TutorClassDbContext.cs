@@ -5,6 +5,7 @@ using TutorClass.Domain.Help;
 using TutorClass.Domain.Lessons;
 using TutorClass.Domain.Materials;
 using TutorClass.Domain.Mentoring;
+using TutorClass.Domain.Moderation;
 using TutorClass.Domain.Notifications;
 using TutorClass.Domain.Plans;
 using TutorClass.Domain.Subjects;
@@ -46,6 +47,7 @@ public sealed class TutorClassDbContext : DbContext, IApplicationDbContext
     public DbSet<CobrancaAssinatura> CobrancasAssinatura => Set<CobrancaAssinatura>();
     public DbSet<PerguntaFrequente> PerguntasFrequentes => Set<PerguntaFrequente>();
     public DbSet<Notificacao> Notificacoes => Set<Notificacao>();
+    public DbSet<Denuncia> Denuncias => Set<Denuncia>();
 
     IQueryable<Materia> IApplicationDbContext.Materias => Materias;
     IQueryable<Professor> IApplicationDbContext.Professores => Professores;
@@ -71,6 +73,7 @@ public sealed class TutorClassDbContext : DbContext, IApplicationDbContext
     IQueryable<CobrancaAssinatura> IApplicationDbContext.CobrancasAssinatura => CobrancasAssinatura;
     IQueryable<PerguntaFrequente> IApplicationDbContext.PerguntasFrequentes => PerguntasFrequentes;
     IQueryable<Notificacao> IApplicationDbContext.Notificacoes => Notificacoes;
+    IQueryable<Denuncia> IApplicationDbContext.Denuncias => Denuncias;
 
     public void AddEntity<TEntity>(TEntity entity) where TEntity : class
     {

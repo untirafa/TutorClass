@@ -8,6 +8,7 @@ import { pageHeader, card, badge, btn, emptyState, pagedList } from '../ui/compo
 import { field, createForm } from '../ui/form.js';
 import { openDialog } from '../ui/dialog.js';
 import { formDialog } from '../ui/dialogs.js';
+import { reportButton } from '../ui/report.js';
 
 export default async function mentoring(ctx) {
   const rows = await get('/api/mentorias/me', { signal: ctx.signal });
@@ -57,7 +58,8 @@ export async function openChat(mentoring, { readOnlyFor } = {}) {
   const render = () => {
     const rows = [...seen.values()].sort((a, b) => new Date(a.dataEnvioUtc) - new Date(b.dataEnvioUtc) || a.id.localeCompare(b.id));
     log.replaceChildren(...(rows.length ? rows.map(m => h('div', { class: `msg${m.remetenteUsuarioId === session.user?.id ? ' own' : ''}` },
-      h('strong', m.remetenteNome), h('span', m.conteudo), h('small', `${when(m.dataEnvioUtc)}${m.lida ? ' · Lida' : ''}`)))
+      h('strong', m.remetenteNome), h('span', m.conteudo), h('small', `${when(m.dataEnvioUtc)}${m.lida ? ' · Lida' : ''}`),
+      !guardian && m.remetenteUsuarioId !== session.user?.id ? reportButton({ tipo: 'Mensagem', alvoId: m.id, vinculoMentoriaId: mentoring.id, alvoNome: `a mensagem de ${m.remetenteNome}` }, 'Denunciar mensagem') : null))
       : [h('p', { class: 'muted' }, 'Inicie a conversa com seu mentorado ou mentor.')]));
     older.hidden = !before;
   };

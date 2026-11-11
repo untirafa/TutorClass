@@ -21,6 +21,8 @@ export const MODULES = [
   { id: 'analise', short: 'Análise', label: 'Análise de professores', icon: 'shield', roles: ['Administrador'], load: L('adminReview') },
   { id: 'indicadores', short: 'Indicadores', label: 'Indicadores', icon: 'chart', roles: ['Administrador'], load: L('adminAnalytics') },
   { id: 'faq-admin', short: 'FAQ', label: 'Gerenciar perguntas', icon: 'help', roles: ['Administrador'], load: L('adminFaq') },
+  { id: 'moderacao', short: 'Denúncias', label: 'Moderação de denúncias', icon: 'flag', roles: ['Administrador'], load: L('adminReports') },
+  { id: 'denuncias', label: 'Minhas denúncias', icon: 'flag', roles: ['Aluno', 'Professor', 'Responsavel'], load: L('myReports') },
   { id: 'notificacoes', short: 'Avisos', label: 'Notificações', icon: 'bell', roles: ['Aluno', 'Professor', 'Responsavel', 'Administrador'], load: L('notifications') },
   { id: 'conta', label: 'Minha conta', icon: 'user', roles: ['Aluno', 'Professor', 'Responsavel', 'Administrador'], load: L('account') },
   { id: 'ajuda', short: 'Dúvidas', label: 'Perguntas frequentes', icon: 'help', roles: ['Aluno', 'Professor', 'Responsavel', 'Administrador'], load: L('help', 'appModule') }
@@ -31,7 +33,7 @@ export const SHORTCUTS = {
   Aluno: ['inicio', 'professores', 'aulas', 'tutoria'],
   Professor: ['inicio', 'aulas', 'alunos', 'disponibilidade'],
   'Responsavel': ['inicio', 'vinculados', 'financeiro', 'ajuda'],
-  Administrador: ['inicio', 'analise', 'indicadores', 'faq-admin']
+  Administrador: ['inicio', 'analise', 'moderacao', 'indicadores']
 };
 
 export const modulesFor = (role) => MODULES.filter(m => m.roles.includes(role));

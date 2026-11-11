@@ -4,6 +4,7 @@ using TutorClass.Domain.Subjects;
 using TutorClass.Domain.Lessons;
 using TutorClass.Domain.Materials;
 using TutorClass.Domain.Mentoring;
+using TutorClass.Domain.Moderation;
 using TutorClass.Domain.Notifications;
 using TutorClass.Domain.Plans;
 using TutorClass.Domain.Teachers;
@@ -37,6 +38,7 @@ public interface IApplicationDbContext
     IQueryable<CobrancaAssinatura> CobrancasAssinatura { get; }
     IQueryable<PerguntaFrequente> PerguntasFrequentes { get; }
     IQueryable<Notificacao> Notificacoes { get; }
+    IQueryable<Denuncia> Denuncias { get; }
 
     void AddEntity<TEntity>(TEntity entity) where TEntity : class;
     void RemoveEntity<TEntity>(TEntity entity) where TEntity : class;

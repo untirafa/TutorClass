@@ -822,6 +822,106 @@ namespace TutorClass.Infrastructure.Persistence.Migrations
                     b.ToTable("mentorias_aluno_professor", (string)null);
                 });
 
+            modelBuilder.Entity("TutorClass.Domain.Moderation.Denuncia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("AnalisadaEmUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("analisada_em_utc");
+
+                    b.Property<Guid?>("AnalisadaPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("analisada_por_id");
+
+                    b.Property<string>("AlvoId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("alvo_id");
+
+                    b.Property<Guid>("AlvoUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("alvo_usuario_id");
+
+                    b.Property<DateTime?>("ContaReativadaEmUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("conta_reativada_em_utc");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("descricao");
+
+                    b.Property<Guid>("DenuncianteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("denunciante_id");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("motivo");
+
+                    b.Property<string>("ObservacaoModeracao")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("observacao_moderacao");
+
+                    b.Property<string>("ResumoAlvo")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("resumo_alvo");
+
+                    b.Property<string>("Sancao")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("sancao");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("TipoAlvo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("tipo_alvo");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("VinculoMentoriaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vinculo_mentoria_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_denuncias");
+
+                    b.HasIndex("AlvoUsuarioId")
+                        .HasDatabaseName("ix_denuncias_alvo_usuario_id");
+
+                    b.HasIndex("DenuncianteId", "TipoAlvo", "AlvoId")
+                        .HasDatabaseName("ix_denuncias_denunciante_id_tipo_alvo_alvo_id");
+
+                    b.HasIndex("Status", "CreatedAtUtc")
+                        .HasDatabaseName("ix_denuncias_status_created_at_utc");
+
+                    b.ToTable("denuncias", (string)null);
+                });
+
             modelBuilder.Entity("TutorClass.Domain.Notifications.Notificacao", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1868,6 +1968,23 @@ namespace TutorClass.Infrastructure.Persistence.Migrations
                     b.Navigation("Aluno");
 
                     b.Navigation("Professor");
+                });
+
+            modelBuilder.Entity("TutorClass.Domain.Moderation.Denuncia", b =>
+                {
+                    b.HasOne("TutorClass.Domain.Users.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("AlvoUsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_denuncias_usuarios_alvo_usuario_id");
+
+                    b.HasOne("TutorClass.Domain.Users.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("DenuncianteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_denuncias_usuarios_denunciante_id");
                 });
 
             modelBuilder.Entity("TutorClass.Domain.Notifications.Notificacao", b =>

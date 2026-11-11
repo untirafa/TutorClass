@@ -64,13 +64,14 @@ export const STATUS_LABEL = {
   Pendente: 'Pendente', EmAnalise: 'Em análise', AguardandoDocumentacao: 'Aguardando documentação',
   Aprovada: 'Aprovada', Reprovada: 'Reprovada', Verificada: 'Verificada', Rejeitada: 'Rejeitada',
   Concluido: 'Concluído', Pago: 'Pago', Cancelado: 'Cancelado', Reembolsado: 'Reembolsado',
-  Candidato: 'Candidato', Aprovado: 'Aprovado', Reprovado: 'Reprovado', Suspenso: 'Suspenso'
+  Candidato: 'Candidato', Aprovado: 'Aprovado', Reprovado: 'Reprovado', Suspenso: 'Suspenso',
+  Aberta: 'Aberta', Procedente: 'Procedente', Improcedente: 'Improcedente'
 };
 export const statusLabel = (s) => STATUS_LABEL[s] || s || '—';
 export const statusTone = (s) => ({
   Confirmada: 'ok', Concluida: 'ok', Aprovada: 'ok', Verificada: 'ok', Pago: 'ok', Concluido: 'ok', Aprovado: 'ok',
   Cancelada: 'bad', Reprovada: 'bad', Rejeitada: 'bad', Cancelado: 'bad', Reprovado: 'bad', Suspenso: 'bad',
-  Solicitada: 'warn', Pendente: 'warn', EmAnalise: 'warn', AguardandoDocumentacao: 'warn', Candidato: 'warn'
+  Aberta: 'warn', Procedente: 'ok', Solicitada: 'warn', Pendente: 'warn', EmAnalise: 'warn', AguardandoDocumentacao: 'warn', Candidato: 'warn'
 }[s] || 'neutral');
 export const paymentLabel = (s) => ({ Cartao: 'Cartão', Pix: 'Pix' }[s] || s);
 export const typeLabel = (s) => ({

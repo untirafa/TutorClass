@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<ResponsavelAlunoService>();
         services.AddScoped<FaqService>();
         services.AddScoped<NotificacaoService>();
+        services.AddScoped<DenunciaService>();
         services.AddScoped<AnalyticsService>();
         services.AddSingleton<IMentoriaChatStore, UnconfiguredMentoriaChatStore>();
         services.AddScoped<CandidaturaProfessorService>();

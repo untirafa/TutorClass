@@ -22,7 +22,7 @@ public sealed class WebShellPage : ContentPage
         web = new WebView
         {
             Source = new UrlWebViewSource { Url = Services.AppConfig.BaseUrl },
-            BackgroundColor = Colors.White,
+            BackgroundColor = Color.FromArgb("#0B1322"), // mesmo fundo do tema escuro do site: evita o clarão branco ao abrir
             AutomationId = "TutorClassWeb"
         };
         web.Navigating += OnNavigating;

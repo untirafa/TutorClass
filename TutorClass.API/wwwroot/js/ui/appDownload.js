@@ -1,10 +1,11 @@
 // Divulgação do aplicativo Android: faixa na página inicial, passo a passo na ajuda e link no rodapé.
-// Dentro do próprio aplicativo (WebView com "TutorClassApp" no user agent) nada disso aparece.
+// Dentro do próprio aplicativo (WebView do Android, com "TutorClassApp" ou "wv" no user agent) nada disso aparece.
 import { h } from '../core/dom.js';
 
 // O APK é anexado a uma Release do GitHub com o nome TutorClass.apk; este link sempre aponta para a mais recente.
 export const APP_APK_URL = 'https://github.com/untirafa/TutorClass/releases/latest/download/TutorClass.apk';
-export const isNativeApp = () => /TutorClassApp/.test(navigator.userAgent || '');
+// "TutorClassApp" é incluído pelo aplicativo; "; wv)" é a marca do WebView do Android e cobre versões antigas do aplicativo.
+export const isNativeApp = () => /TutorClassApp|;\s*wv\)/.test(navigator.userAgent || '');
 
 const downloadLink = (text, cls = 'btn') =>
   h('a', { class: cls, href: APP_APK_URL, rel: 'noopener', download: 'TutorClass.apk' }, text);

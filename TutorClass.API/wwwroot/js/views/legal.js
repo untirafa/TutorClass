@@ -47,7 +47,7 @@ export async function policy(ctx) {
       'Responsável: vê os dados do aluno que está vinculado a ele, como aulas, plano e financeiro.',
       'Prestadores de infraestrutura (operadores): hospedagem do servidor, banco de dados relacional (PostgreSQL) e banco do chat de Mentoria (MongoDB). Eles tratam os dados apenas para manter o serviço no ar.',
       'TutorIA: quando o provedor de IA generativa (Google Gemini) está habilitado, a pergunta do aluno é enviada a esse serviço para gerar a resposta. Não envie dados sensíveis nas perguntas.',
-      'VLibras (Governo Federal): o tradutor para Libras só é carregado quando você toca no botão “Libras”. Antes disso, nenhuma informação sua é enviada a esse serviço.',
+      'VLibras (Governo Federal): o tradutor para Libras é carregado a partir do serviço do Governo Federal (vlibras.gov.br) quando a página abre, e o navegador pode enviar a esse serviço dados técnicos da conexão, como o endereço IP. O TutorClass não envia seus dados de cadastro nem o conteúdo da sua conta ao VLibras.',
       'Não vendemos nem alugamos dados pessoais.')),
     section('6. Cookies e armazenamento no navegador', ul(
       'Não usamos cookies de rastreamento, nem serviços externos de estatísticas, fontes ou imagens.',

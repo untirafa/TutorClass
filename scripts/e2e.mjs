@@ -5,6 +5,8 @@ const results = []; const ok = (n, c, d = '') => { results.push([c ? 'OK ' : 'FA
 const browser = await chromium.launch();
 async function login(email) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  // O VLibras é um serviço externo (vlibras.gov.br): nos testes ele é simulado para o resultado não depender da rede.
+  await ctx.route(/vlibras\.gov\.br/, (route) => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
   const page = await ctx.newPage(); const errors = [];
   page.on('pageerror', e => errors.push(e.message)); page.on('console', m => m.type() === 'error' && errors.push(m.text()));
   await page.goto(base + '/#login'); await page.waitForSelector('form');
@@ -82,6 +84,7 @@ for (const [email, mods] of [['responsavel@teste.dev', ['inicio', 'vinculados', 
   ok('barra lateral: Minhas aulas e Materiais', (await page.locator('#sidebar a:has-text("Minhas aulas")').count()) === 1 && (await page.locator('#sidebar a:has-text("Materiais e atividades")').count()) === 1);
   const hb = await page.locator('.brand').boundingBox(), hr = await page.locator('#header-actions').boundingBox();
   ok('cabeçalho: marca encostada à esquerda e ações à direita', hb.x <= 16 && 1280 - (hr.x + hr.width) <= 16, `${hb.x} / ${1280 - (hr.x + hr.width)}`);
+  await page.locator('#faq-termo').waitFor({ timeout: 5000 }).catch(() => {});
   ok('aluno: barra de perguntas frequentes no início', await page.locator('form[role=search] input#faq-termo').count() === 1);
   await page.locator('#faq-termo').fill('pagar'); await page.keyboard.press('Enter'); await page.waitForURL(/#app\/ajuda\?termo=pagar/);
   await page.waitForFunction(() => /perguntas frequentes/i.test(document.querySelector('main h1')?.textContent || ''), null, { timeout: 5000 }).catch(() => {});

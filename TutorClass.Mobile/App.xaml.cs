@@ -19,7 +19,7 @@ public partial class App : Application, IAppNavigation
     public App(SessionService session, ProfessorService professores, MateriaService materias, AulaService aulas, TutorIaService tutorIa, NotificacaoService notificacoes, PlanoService planos)
     {
         InitializeComponent();
-        UserAppTheme = AppTheme.Light;
+        UserAppTheme = AppTheme.Dark;
         this.session = session;
         this.professores = professores;
         this.materias = materias;

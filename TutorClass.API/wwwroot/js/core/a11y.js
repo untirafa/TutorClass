@@ -1,6 +1,8 @@
 // Acessibilidade transversal (WCAG 2.2): anúncios, foco, preferências do usuário e atalhos.
 const KEY = 'tutorclass.prefs';
-export const DEFAULT_PREFS = Object.freeze({ scale: '100', contrast: 'auto', motion: 'auto', theme: 'auto' });
+// Dentro do aplicativo Android (WebView) o tema escuro é o padrão; no navegador, segue o sistema. A escolha da pessoa sempre prevalece.
+const inApp = () => /TutorClassApp|;\s*wv\)/.test(globalThis.navigator?.userAgent || '');
+export const DEFAULT_PREFS = Object.freeze({ scale: '100', contrast: 'auto', motion: 'auto', theme: inApp() ? 'dark' : 'auto' });
 let prefs = { ...DEFAULT_PREFS };
 
 const storage = {

@@ -207,11 +207,6 @@ body.in-app .bg-video, body.in-app .bg-video-toggle { display: none; }
 
 /* VLibras: acima dos demais elementos fixos do site */
 [vw] { z-index: 70; }
-body:not(.vlibras-aberto) [vw] { display: none !important; }
-.vlibras-trigger { position: fixed; right: 4.75rem; bottom: 1rem; z-index: 70; min-width: var(--target); min-height: var(--target); padding: .5rem 1rem; border: 2px solid var(--on-primary); border-radius: var(--radius-pill); background: var(--primary); color: var(--on-primary); font: inherit; font-weight: 700; cursor: pointer; box-shadow: var(--shadow-2, 0 2px 8px rgba(0,0,0,.3)); }
-.in-app .vlibras-trigger { right: .75rem; bottom: 5rem; }
-@media (min-width: 64em) { .in-app .vlibras-trigger { bottom: 1rem; } }
-.vlibras-trigger:disabled { cursor: progress; opacity: .85; }
 
 /* Celular (área pública): linha 1 = marca + menu; linha 2 = Acessibilidade, Entrar e Criar conta alinhados e do mesmo tamanho */
 @media (max-width: 47.99em) {

@@ -176,7 +176,15 @@ if (!app.Environment.IsDevelopment())
 
 // Somente wwwroot é público. Rotas do frontend usam # e não precisam de fallback.
 app.UseDefaultFiles();
-app.UseStaticFiles();
+// HTML, JS e CSS do front-end sempre são revalidados (ETag): quem abre o site, inclusive no celular, recebe a versão nova logo apos um deploy.
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        var extensao = Path.GetExtension(context.File.Name);
+        if (extensao is ".html" or ".js" or ".css") context.Context.Response.Headers["Cache-Control"] = "no-cache";
+    }
+});
 
 app.UseCors("TutorClassFrontend");
 app.UseAuthentication();

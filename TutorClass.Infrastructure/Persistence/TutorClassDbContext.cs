@@ -27,6 +27,7 @@ public sealed class TutorClassDbContext : DbContext, IApplicationDbContext
     public DbSet<Professor> Professores => Set<Professor>();
     public DbSet<Administrador> Administradores => Set<Administrador>();
     public DbSet<ResponsavelAluno> ResponsaveisAlunos => Set<ResponsavelAluno>();
+    public DbSet<SolicitacaoVinculoResponsavel> SolicitacoesVinculoResponsavel => Set<SolicitacaoVinculoResponsavel>();
     public DbSet<Materia> Materias => Set<Materia>();
     public DbSet<ProfessorMateria> ProfessoresMaterias => Set<ProfessorMateria>();
     public DbSet<CandidaturaProfessor> CandidaturasProfessor => Set<CandidaturaProfessor>();
@@ -58,6 +59,7 @@ public sealed class TutorClassDbContext : DbContext, IApplicationDbContext
     IQueryable<Administrador> IApplicationDbContext.Administradores => Administradores;
     IQueryable<Usuario> IApplicationDbContext.Usuarios => Usuarios;
     IQueryable<ResponsavelAluno> IApplicationDbContext.ResponsaveisAlunos => ResponsaveisAlunos;
+    IQueryable<SolicitacaoVinculoResponsavel> IApplicationDbContext.SolicitacoesVinculoResponsavel => SolicitacoesVinculoResponsavel;
     IQueryable<Aula> IApplicationDbContext.Aulas => Aulas;
     IQueryable<GravacaoAula> IApplicationDbContext.GravacoesAula => GravacoesAula;
     IQueryable<AulaReagendamento> IApplicationDbContext.AulasReagendamentos => AulasReagendamentos;

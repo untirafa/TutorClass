@@ -2,19 +2,34 @@
 import { h } from '../core/dom.js';
 import { get, post } from '../core/api.js';
 import { money, when, dayOnly } from '../core/format.js';
-import { pageHeader, card, dl, btn, linkButton, link, tabs, emptyState, pagedList, dataTable, statusBadge, badge, loading, errorState } from '../ui/components.js';
-import { confirmDialog } from '../ui/dialogs.js';
+import { pageHeader, card, dl, btn, linkButton, link, tabs, emptyState, pagedList, dataTable, statusBadge, badge, loading, errorState, section } from '../ui/components.js';
+import { confirmDialog, formDialog } from '../ui/dialogs.js';
+import { field } from '../ui/form.js';
 import { notice } from '../ui/toast.js';
 import { lessonCard, planCard, PLANS } from './shared.js';
 import { openLesson } from './lessons.js';
 import { openChat } from './mentoring.js';
 
 export async function listModule(ctx) {
-  const rows = await get('/api/responsavel/alunos', { signal: ctx.signal });
-  ctx.host.append(pageHeader('Alunos vinculados', 'Você acompanha aulas, pagamentos e a mentoria apenas dos alunos vinculados à sua conta. A vinculação é feita pela administração.'),
+  const [rows, requests] = await Promise.all([
+    get('/api/responsavel/alunos', { signal: ctx.signal }),
+    get('/api/responsavel/solicitacoes-vinculo', { signal: ctx.signal }).catch(() => [])
+  ]);
+  const askLink = () => formDialog('Solicitar vínculo com aluno', [
+    field('nomeAluno', 'Nome completo do aluno', 'text', { minLength: 5, maxLength: 200, autocomplete: 'off', help: 'Digite o nome e o sobrenome como o aluno aparece no cadastro do TutorClass.',
+      validate: (v) => /\S+\s+\S+/.test(v.trim()) ? '' : 'Informe o nome completo (nome e sobrenome).' }),
+    field('parentesco', 'Parentesco', 'text', { required: false, maxLength: 80, placeholder: 'Ex.: Mãe, Pai, Avó', autocomplete: 'off' })], {},
+  async (v) => { await post('/api/responsavel/solicitacoes-vinculo', { nomeAluno: v.nomeAluno.trim(), parentesco: (v.parentesco || '').trim() || null }); ctx.router.refresh(); },
+  { description: 'A administração confere o pedido e vincula o aluno à sua conta. Você receberá um aviso com a decisão.', save: 'Enviar para análise', success: 'Solicitação enviada para análise da administração.' });
+  const history = [...requests].sort((a, b) => new Date(b.createdAtUtc) - new Date(a.createdAtUtc));
+  ctx.host.append(pageHeader('Alunos vinculados', 'Você acompanha aulas, pagamentos e a mentoria apenas dos alunos vinculados à sua conta. Para vincular um aluno, informe o nome completo e a administração analisa o pedido.',
+    btn('Solicitar vínculo com aluno', askLink, { kind: 'primary' })),
     pagedList(rows, (a) => card({ title: a.nome, subtitle: a.parentesco || 'Aluno vinculado' }, h('p', { class: 'small muted' }, `${a.email || ''}${a.dataNascimento ? ` · Nascimento: ${dayOnly(a.dataNascimento)}` : ''}`),
       h('div', { class: 'actions' }, linkButton('Acompanhar', `#app/dependente/${a.id}`, 'primary'))),
-      { empty: 'Nenhum aluno está vinculado à sua conta ainda. Peça a vinculação à administração.', label: 'alunos' }));
+      { empty: 'Nenhum aluno está vinculado à sua conta ainda. Use "Solicitar vínculo com aluno" para enviar o pedido à administração.', label: 'alunos' }),
+    history.length ? section('Minhas solicitações de vínculo', pagedList(history, (r) => card({ title: r.nomeAlunoInformado, subtitle: r.parentesco }, statusBadge(r.status),
+      h('p', { class: 'small muted' }, `Enviada em ${when(r.createdAtUtc)}${r.analisadaEmUtc ? ` · Analisada em ${when(r.analisadaEmUtc)}` : ''}`),
+      r.motivo ? h('p', { class: 'small' }, `Motivo: ${r.motivo}`) : null), { size: 6, label: 'solicitações' })) : null);
 }
 
 export async function studentModule(ctx) {

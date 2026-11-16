@@ -477,7 +477,8 @@ public sealed class AulaService
     private string GetMateriaNome(Guid materiaId) => _db.Materias.Where(m => m.Id == materiaId).Select(m => m.Nome).SingleOrDefault() ?? "Materia";
     private string GetUsuarioNome(Guid usuarioId) => _db.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.Nome).SingleOrDefault() ?? "Usuario";
 
-    private static string FormatDate(DateTime value) => $"{value:dd/MM/yyyy HH:mm} UTC";
+    // Brasilia fica fixa em UTC-3 (sem horario de verao desde 2019); evita depender de tzdata no servidor.
+    private static string FormatDate(DateTime value) => $"{NormalizeUtc(value).AddHours(-3):dd/MM/yyyy HH:mm} (Brasilia)";
 
     private static DateTime NormalizeUtc(DateTime value)
     {

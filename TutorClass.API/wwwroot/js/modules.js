@@ -19,6 +19,7 @@ export const MODULES = [
   { id: 'profissional', label: 'Perfil profissional', icon: 'id', roles: ['Professor'], load: L('teacherProfile') },
   { id: 'disponibilidade', short: 'Horários', label: 'Disponibilidade', icon: 'clock', roles: ['Professor'], load: L('availability') },
   { id: 'analise', short: 'Análise', label: 'Análise de professores', icon: 'shield', roles: ['Administrador'], load: L('adminReview') },
+  { id: 'vinculos', short: 'Vínculos', label: 'Vínculos de responsáveis', icon: 'users', roles: ['Administrador'], load: L('adminLinks') },
   { id: 'indicadores', short: 'Indicadores', label: 'Indicadores', icon: 'chart', roles: ['Administrador'], load: L('adminAnalytics') },
   { id: 'faq-admin', short: 'FAQ', label: 'Gerenciar perguntas', icon: 'help', roles: ['Administrador'], load: L('adminFaq') },
   { id: 'moderacao', short: 'Denúncias', label: 'Moderação de denúncias', icon: 'flag', roles: ['Administrador'], load: L('adminReports') },
@@ -33,7 +34,7 @@ export const SHORTCUTS = {
   Aluno: ['inicio', 'professores', 'aulas', 'tutoria'],
   Professor: ['inicio', 'aulas', 'alunos', 'disponibilidade'],
   'Responsavel': ['inicio', 'vinculados', 'financeiro', 'ajuda'],
-  Administrador: ['inicio', 'analise', 'moderacao', 'indicadores']
+  Administrador: ['inicio', 'analise', 'vinculos', 'moderacao']
 };
 
 export const modulesFor = (role) => MODULES.filter(m => m.roles.includes(role));

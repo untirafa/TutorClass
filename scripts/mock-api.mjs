@@ -51,6 +51,7 @@ const faq = [
   { id: id(), pergunta: 'O que o plano Mentoria inclui?', resposta: 'TutorIA sem limite diário do plano, até 2 mentores, chat e gravações elegíveis.', categoria: 'Planos', palavrasChave: 'plano mentoria', ativo: true, ordemExibicao: 3 }
 ];
 const notifs = [{ id: id(), tipo: 'AulaConfirmada', titulo: 'Aula confirmada', mensagem: 'Sua aula de Redação foi confirmada pela professora Beatriz.', lida: false, dataCriacaoUtc: iso(now - 3600000), rotaAcao: '/aulas', prioridade: 'Importante' }];
+const vinculoReqs = [];
 const dependents = [{ id: aluno.id, nome: aluno.nome, email: aluno.email, dataNascimento: '2009-04-12', parentesco: 'Filha' }];
 const candidaturas = [{ id: id(), professorId: teachers[3].id, professorNome: 'Lucas Prado', professorEmail: 'lucas@teste.dev', status: 'Pendente', mensagem: 'Sou historiador com 4 anos de experiência.', motivo: null, administradorAnaliseId: null, dataAnaliseUtc: null, createdAtUtc: iso(now - day) }];
 let plan = { planoAtual: 'Gratuito', assinaturaAtiva: false, possuiIaEducacional: false, limiteMensagensIaDia: null, possuiMentoria: false, possuiGravacoesElegiveis: false, jaUsouPromocaoPrimeiraAssinatura: false };
@@ -146,6 +147,17 @@ async function api(req, res, url) {
   if (p.match(/^\/api\/professores\/[^/]+\/(materias|candidaturas|qualificacoes)$/) && m === 'POST') return send(res, 201, id());
   if (p.match(/^\/api\/professores\/[^/]+\/qualificacoes$/)) return send(res, 200, quals);
   // responsável
+  if (p === '/api/responsavel/solicitacoes-vinculo') {
+    if (m === 'POST') { const r0 = { id: id(), responsavelId: resp.id, nomeAlunoInformado: b.nomeAluno, parentesco: b.parentesco || 'Nao informado', status: 'Pendente', motivo: null, alunoId: null, createdAtUtc: iso(Date.now()), analisadaEmUtc: null }; vinculoReqs.push(r0); return send(res, 201, r0); }
+    return send(res, 200, vinculoReqs);
+  }
+  if (p === '/api/admin/solicitacoes-vinculo') return send(res, 200, vinculoReqs.map(v => ({ ...v, responsavelNome: resp.nome, responsavelEmail: resp.email, alunoNome: users.find(u => u.id === v.alunoId)?.nome ?? null,
+    candidatos: v.status === 'Pendente' ? users.filter(u => u.perfil === 'Aluno' && u.nome.toLowerCase().includes(String(v.nomeAlunoInformado).toLowerCase())).map(u => ({ id: u.id, nome: u.nome, email: u.email, dataNascimento: u.dataNascimento })) : [] })));
+  if ((r = p.match(/^\/api\/admin\/solicitacoes-vinculo\/([^/]+)\/(aprovar|recusar)$/))) {
+    const v = vinculoReqs.find(x => x.id === r[1]);
+    if (r[2] === 'aprovar') { v.status = 'Aprovada'; v.alunoId = b.alunoId; const a = users.find(u => u.id === b.alunoId); dependents.push({ id: a.id, nome: a.nome, email: a.email, dataNascimento: a.dataNascimento, parentesco: v.parentesco }); } else { v.status = 'Recusada'; v.motivo = b.motivo; }
+    v.analisadaEmUtc = iso(Date.now()); return send(res, 204, null);
+  }
   if (p === '/api/responsavel/alunos') return send(res, 200, dependents);
   if ((r = p.match(/^\/api\/responsavel\/alunos\/([^/]+)\/(aulas|plano|financeiro\/historico|mentoria|mentoria\/acompanhamentos)$/))) {
     if (r[2] === 'aulas') return m === 'POST' ? send(res, 201, lessons[2]) : send(res, 200, lessons.map(summary));

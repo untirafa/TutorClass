@@ -23,6 +23,7 @@ public interface IApplicationDbContext
     IQueryable<Administrador> Administradores { get; }
     IQueryable<Usuario> Usuarios { get; }
     IQueryable<ResponsavelAluno> ResponsaveisAlunos { get; }
+    IQueryable<SolicitacaoVinculoResponsavel> SolicitacoesVinculoResponsavel { get; }
     IQueryable<Aula> Aulas { get; }
     IQueryable<GravacaoAula> GravacoesAula { get; }
     IQueryable<AulaReagendamento> AulasReagendamentos { get; }

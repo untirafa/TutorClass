@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<ITutorIaProvider, TutorIaSimuladaProvider>();
         services.AddScoped<MentoriaChatService>();
         services.AddScoped<ResponsavelAlunoService>();
+        services.AddScoped<VinculoResponsavelService>();
         services.AddScoped<FaqService>();
         services.AddScoped<NotificacaoService>();
         services.AddScoped<DenunciaService>();

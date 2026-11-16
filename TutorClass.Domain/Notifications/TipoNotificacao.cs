@@ -16,5 +16,7 @@ public enum TipoNotificacao
     NovoMaterial = 12,
     NovaDenuncia = 13,
     DenunciaAtualizada = 14,
-    AdvertenciaModeracao = 15
+    AdvertenciaModeracao = 15,
+    NovaSolicitacaoVinculo = 16,
+    VinculoResponsavelAtualizado = 17
 }

@@ -14,6 +14,8 @@ export function notificationRoute(route) {
   const text = String(route).toLowerCase();
   if (text.includes('regras-de-convivencia')) return '#regras-de-convivencia';
   if (text.includes('moderacao')) return '#app/moderacao';
+  if (text.includes('vinculos')) return '#app/vinculos';
+  if (text.includes('vinculados')) return '#app/vinculados';
   if (text.includes('minhas-denuncias')) return '#app/denuncias';
   const target = MAP.find(([m]) => String(route).toLowerCase().includes(m));
   if (!target) return null;

@@ -113,6 +113,31 @@ for (const [email, mods] of [['responsavel@teste.dev', ['inicio', 'vinculados', 
   ok('cadastro: olhinho presente', await page.getByRole('button', { name: /mostrar senha/i }).count() === 1);
   await ctx.close();
 }
+// Vínculo responsável-aluno: o responsável pede pelo nome completo, a administração analisa e aprova.
+{
+  const g = await login('responsavel@teste.dev');
+  await g.page.goto(base + '/#app/vinculados'); await g.page.waitForSelector('main h1');
+  await g.page.getByRole('button', { name: /solicitar vínculo com aluno/i }).click();
+  await g.page.locator('dialog[open] input[name=nomeAluno]').fill('Pedro');
+  await g.page.locator('dialog[open]').getByRole('button', { name: /enviar para análise/i }).click();
+  ok('vínculo: nome incompleto é recusado', await g.page.locator('dialog[open]').count() === 1 && /nome completo/i.test(await g.page.locator('dialog[open]').innerText()));
+  await g.page.locator('dialog[open] input[name=nomeAluno]').fill('Pedro Souza');
+  await g.page.locator('dialog[open] input[name=parentesco]').fill('Pai');
+  await g.page.locator('dialog[open]').getByRole('button', { name: /enviar para análise/i }).click();
+  await g.page.waitForSelector('text=Minhas solicitações de vínculo');
+  ok('vínculo: responsável vê a solicitação pendente', /Pedro Souza/.test(await g.page.locator('main').innerText()) && /Pendente/.test(await g.page.locator('main').innerText()));
+  const a = await login('admin@teste.dev');
+  await a.page.goto(base + '/#app/vinculos'); await a.page.waitForSelector('main article');
+  ok('vínculo: administrador recebe a solicitação com candidatos', /Pedro Souza/.test(await a.page.locator('main').innerText()) && /1 aluno\(s\) com nome compatível/.test(await a.page.locator('main').innerText()));
+  await a.page.getByRole('button', { name: /^aprovar$/i }).click();
+  await a.page.locator('dialog[open]').getByRole('button', { name: /aprovar vínculo/i }).click();
+  await a.page.waitForTimeout(600);
+  ok('vínculo: aprovação muda a situação', /Aprovada/.test(await a.page.locator('main').innerText()) || /Nenhuma solicitação/.test(await a.page.locator('main').innerText()));
+  await g.page.reload(); await g.page.waitForSelector('main article'); await g.page.waitForTimeout(400);
+  ok('vínculo: aluno aprovado aparece para o responsável', await g.page.locator('main article:has-text("Pedro Souza") a:has-text("Acompanhar")').count() === 1);
+  ok('vínculo: sem erros de página', g.errors.length === 0 && a.errors.length === 0, [...g.errors, ...a.errors].join(' | '));
+  await g.ctx.close(); await a.ctx.close();
+}
 {
   const { page, ctx } = await login('admin@teste.dev');
   await page.goto(base + '/#app/faq-admin'); await page.waitForSelector('main article');

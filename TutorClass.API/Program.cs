@@ -155,6 +155,16 @@ if (useLocalDatabase)
         CREATE INDEX IF NOT EXISTS ix_denuncias_denunciante_id_tipo_alvo_alvo_id ON denuncias (denunciante_id, tipo_alvo, alvo_id);
         CREATE INDEX IF NOT EXISTS ix_denuncias_status_created_at_utc ON denuncias (status, created_at_utc);
         """);
+    await database.Database.ExecuteSqlRawAsync("""
+        CREATE TABLE IF NOT EXISTS solicitacoes_vinculo (
+            id TEXT NOT NULL CONSTRAINT pk_solicitacoes_vinculo PRIMARY KEY,
+            responsavel_id TEXT NOT NULL, nome_aluno_informado TEXT NOT NULL, parentesco TEXT NOT NULL, status TEXT NOT NULL,
+            aluno_id TEXT NULL, analisada_por_id TEXT NULL, analisada_em_utc TEXT NULL, motivo TEXT NULL,
+            created_at_utc TEXT NOT NULL, updated_at_utc TEXT NULL);
+        CREATE INDEX IF NOT EXISTS ix_solicitacoes_vinculo_aluno_id ON solicitacoes_vinculo (aluno_id);
+        CREATE INDEX IF NOT EXISTS ix_solicitacoes_vinculo_responsavel_id_status ON solicitacoes_vinculo (responsavel_id, status);
+        CREATE INDEX IF NOT EXISTS ix_solicitacoes_vinculo_status_created_at_utc ON solicitacoes_vinculo (status, created_at_utc);
+        """);
     app.Logger.LogInformation("Desenvolvimento: banco SQLite local em .local/tutorclass.db. As contas persistem ao reiniciar a API.");
 }
 

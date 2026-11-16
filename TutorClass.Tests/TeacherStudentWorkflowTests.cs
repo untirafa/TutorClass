@@ -222,9 +222,13 @@ public sealed class TeacherStudentWorkflowTests
             await professor.PostAsJsonAsync($"/api/professores/{professorUsuario.Id}/qualificacoes",
                 new AdicionarQualificacaoProfessorRequest(TipoQualificacaoProfessor.Curso, "Ensino de matematica",
                     "Instituicao de teste", null, null, "https://example.com/comprovante.pdf"), Json), HttpStatusCode.Created);
-        var candidaturaId = await ReadAsync<Guid>(
-            await professor.PostAsJsonAsync($"/api/professores/{professorUsuario.Id}/candidaturas",
-                new EnviarCandidaturaProfessorRequest("Quero lecionar matematica e acompanhar alunos."), Json), HttpStatusCode.Created);
+        // O cadastro do professor ja envia a candidatura (Pendente) para a analise da administracao.
+        var minhasCandidaturas = await ReadAsync<CandidaturaProfessorDto[]>(await professor.GetAsync("/api/professores/me/candidaturas"));
+        var candidaturaInicial = Assert.Single(minhasCandidaturas);
+        Assert.Equal(StatusCandidaturaProfessor.Pendente, candidaturaInicial.Status);
+        var candidaturaId = candidaturaInicial.Id;
+        await AssertStatusAsync(await professor.PostAsJsonAsync($"/api/professores/{professorUsuario.Id}/candidaturas",
+            new EnviarCandidaturaProfessorRequest("Segundo envio enquanto a primeira candidatura esta ativa."), Json), HttpStatusCode.BadRequest);
         await AssertStatusAsync(await professor.PostAsync($"/api/admin/qualificacoes/{qualificacao.Id}/verificar", null), HttpStatusCode.Forbidden);
 
         using var adminClient = factory.CreateClient();

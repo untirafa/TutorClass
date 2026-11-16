@@ -1515,6 +1515,75 @@ namespace TutorClass.Infrastructure.Persistence.Migrations
                     b.ToTable("responsaveis_alunos", (string)null);
                 });
 
+            modelBuilder.Entity("TutorClass.Domain.Users.SolicitacaoVinculoResponsavel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AlunoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("aluno_id");
+
+                    b.Property<DateTime?>("AnalisadaEmUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("analisada_em_utc");
+
+                    b.Property<Guid?>("AnalisadaPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("analisada_por_id");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("motivo");
+
+                    b.Property<string>("NomeAlunoInformado")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nome_aluno_informado");
+
+                    b.Property<string>("Parentesco")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("parentesco");
+
+                    b.Property<Guid>("ResponsavelId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("responsavel_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_solicitacoes_vinculo");
+
+                    b.HasIndex("AlunoId")
+                        .HasDatabaseName("ix_solicitacoes_vinculo_aluno_id");
+
+                    b.HasIndex("ResponsavelId", "Status")
+                        .HasDatabaseName("ix_solicitacoes_vinculo_responsavel_id_status");
+
+                    b.HasIndex("Status", "CreatedAtUtc")
+                        .HasDatabaseName("ix_solicitacoes_vinculo_status_created_at_utc");
+
+                    b.ToTable("solicitacoes_vinculo", (string)null);
+                });
+
             modelBuilder.Entity("TutorClass.Domain.Users.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2136,6 +2205,22 @@ namespace TutorClass.Infrastructure.Persistence.Migrations
                     b.Navigation("Aluno");
 
                     b.Navigation("Responsavel");
+                });
+
+            modelBuilder.Entity("TutorClass.Domain.Users.SolicitacaoVinculoResponsavel", b =>
+                {
+                    b.HasOne("TutorClass.Domain.Users.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("AlunoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_solicitacoes_vinculo_usuarios_aluno_id");
+
+                    b.HasOne("TutorClass.Domain.Users.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("ResponsavelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_solicitacoes_vinculo_usuarios_responsavel_id");
                 });
 
             modelBuilder.Entity("TutorClass.Domain.Subjects.Materia", b =>

@@ -2,7 +2,8 @@
 import { h, mount, icon } from '../core/dom.js';
 import { publicGet, get, post, q, subjects, errorText, isAbort } from '../core/api.js';
 import { session, isSignedIn, isGuardian, isStudent } from '../core/session.js';
-import { money, hhmm, brasiliaHint, utcInputToIso, estimateTotal, dayOnly } from '../core/format.js';
+import { money, brasiliaInputToIso, brasiliaAvailability, brasiliaSlotText, estimateTotal, dayOnly } from '../core/format.js';
+import { slotCalendar } from '../ui/slotCalendar.js';
 import { announce } from '../core/a11y.js';
 import { pageHeader, pagedList, loading, errorState, emptyState, tabs, stars, badge, avatar, dl, section, linkButton, link } from '../ui/components.js';
 import { createForm, field } from '../ui/form.js';
@@ -97,29 +98,8 @@ export async function searchModule(ctx) {
 }
 
 /* ---------- Horários livres ---------- */
-function slotFinder(professorId, onPick) {
-  const list = h('ul', { class: 'slot-list', 'aria-live': 'polite' });
-  const form = createForm({
-    fields: [field('data', 'Data para consultar (UTC)', 'date', { help: 'Os horários aparecem em UTC e em Brasília.' })],
-    submit: 'Consultar horários',
-    onSubmit: async (v) => {
-      const rows = await publicGet(`/api/professores/${professorId}/horarios-livres` + q({ data: v.data }));
-      list.replaceChildren();
-      if (!rows.length) { list.append(h('li', { class: 'muted' }, 'Nenhum intervalo livre nesta data.')); announce('Nenhum horário livre nesta data.'); return; }
-      rows.forEach(s => {
-        const b = h('button', { type: 'button', class: 'btn secondary', 'aria-pressed': 'false' },
-          `${hhmm(s.inicio)}–${hhmm(s.fim)} UTC`, h('span', { class: 'small muted' }, ` ${brasiliaHint(`${s.data}T${hhmm(s.inicio)}`).replace(/^\d+\/\d+\/\d+ /, '')}`));
-        b.addEventListener('click', () => {
-          list.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', 'false'));
-          b.setAttribute('aria-pressed', 'true'); onPick?.(`${s.data}T${hhmm(s.inicio)}`, s); announce(`Horário ${hhmm(s.inicio)} UTC selecionado.`);
-        });
-        list.append(h('li', null, b));
-      });
-      announce(`${rows.length} horário(s) livre(s).`);
-    }
-  });
-  return h('div', { class: 'stack' }, form.el, list);
-}
+// Calendário só com os dias e horários em que o professor atende (horário de Brasília).
+const slotFinder = (profile, options = {}) => slotCalendar({ professorId: profile.id, disponibilidades: profile.disponibilidades || [], ...options });
 
 /* ---------- Solicitação de aula ---------- */
 export async function openBooking(profile) {
@@ -136,22 +116,27 @@ export async function openBooking(profile) {
   const fields = [
     ...(isGuardian() ? [field('alunoId', 'Aluno que terá a aula', 'text', { options: dependents.map(d => ({ value: d.id, label: d.nome })) })] : []),
     field('materiaId', 'Matéria', 'text', { options: subs.map(m => ({ value: m.id, label: m.nome })) }),
-    field('inicio', 'Início da aula (UTC)', 'datetime-local', { help: 'Informe em UTC (15:00 UTC = 12:00 em Brasília) ou escolha um horário livre acima.', liveHint: brasiliaHint }),
     field('duracaoMinutos', 'Duração em minutos', 'number', { min: 30, max: 240, step: 1, value: 60, liveHint: (v) => { const t = estimateTotal(profile.precoHora, Number(v)); return t == null ? '' : `Total estimado: ${money(t)}`; } })
   ];
+  let calendar;
   const form = createForm({
     fields, submit: 'Solicitar aula', onCancel: () => dlg.close(),
     onSubmit: async (v) => {
-      const body = { professorId: profile.id, materiaId: v.materiaId, inicio: utcInputToIso(v.inicio), duracaoMinutos: v.duracaoMinutos };
+      const picked = calendar.value();
+      if (!picked) throw new Error('Escolha um dia e um horário livre no calendário.');
+      const body = { professorId: profile.id, materiaId: v.materiaId, inicio: brasiliaInputToIso(picked.date, picked.time), duracaoMinutos: v.duracaoMinutos };
       if (isGuardian()) await post(`/api/responsavel/alunos/${encodeURIComponent(v.alunoId)}/aulas`, body);
       else await post('/api/aulas', body);
       dlg.close(); notice('Solicitação enviada. Aguarde a confirmação do professor.');
       location.hash = isGuardian() ? `app/dependente/${v.alunoId}` : 'app/aulas';
     }
   });
-  dlg.body.append(h('div', { class: 'stack' }, h('h3', 'Horários livres'), slotFinder(profile.id, (iso) => {
-    form.controls.inicio.value = iso; form.controls.inicio.dispatchEvent(new Event('input', { bubbles: true }));
-  })), h('hr'), form.el);
+  if (!profile.disponibilidades) profile = { ...profile, disponibilidades: await publicGet(`/api/professores/${encodeURIComponent(profile.id)}/disponibilidades`) };
+  calendar = slotFinder(profile, { pick: true });
+  const setDuration = () => calendar.setDuration(form.controls.duracaoMinutos.value);
+  form.controls.duracaoMinutos.addEventListener('input', setDuration); setDuration();
+  dlg.body.append(h('div', { class: 'stack' }, h('h3', 'Escolha o dia e o horário'),
+    h('p', { class: 'small muted' }, 'Só aparecem os dias e horários livres do professor, em horário de Brasília.'), calendar.el), h('hr'), form.el);
   return dlg;
 }
 
@@ -193,8 +178,8 @@ async function renderProfile(ctx) {
   const avaliacoes = () => h('div', { class: 'stack' }, rateBox(), reviews.length ? h('div', { class: 'grid cards' }, reviews.map(r => reviewCard(r, r.alunoId !== session.user?.id ? reportButton({ tipo: 'Avaliacao', alvoId: r.id, alvoNome: `a avaliação de ${r.aluno || 'aluno'}` }, 'Denunciar avaliação') : null))) : emptyState('Nenhuma avaliação publicada.'));
   const agenda = () => h('div', { class: 'stack' },
     h('h2', 'Disponibilidade semanal'),
-    (profile.disponibilidades || []).length ? h('ul', null, profile.disponibilidades.map(d => h('li', weeklySlotText(d)))) : emptyState('O professor ainda não cadastrou horários.'),
-    h('h2', 'Horários livres em uma data'), slotFinder(profile.id));
+    (profile.disponibilidades || []).length ? h('ul', null, brasiliaAvailability(profile.disponibilidades).map(g => h('li', brasiliaSlotText(g)))) : emptyState('O professor ainda não cadastrou horários.'),
+    h('h2', 'Horários livres por data'), slotFinder(profile).el);
 
   const bookable = isStudent() || isGuardian() || !isSignedIn();
   const bookButton = h('button', { type: 'button', class: 'btn primary block', onclick: async (e) => { try { await openBooking(profile); } catch (err) { if (!isAbort(err)) notice(errorText(err), { error: true }); } } },

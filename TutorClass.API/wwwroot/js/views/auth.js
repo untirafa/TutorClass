@@ -33,7 +33,7 @@ const KINDS = {
     body: (v) => ({ nome: v.nome, email: v.email, senha: v.senha, dataNascimento: v.dataNascimento || null })
   },
   'cadastro-professor': {
-    kind: 'professor', title: 'Quero ensinar', lead: 'Crie seu perfil. Depois, informe matérias e qualificações e envie sua candidatura para análise.', submit: 'Criar minha conta de professor',
+    kind: 'professor', title: 'Quero ensinar', lead: 'Crie seu perfil: sua candidatura segue automaticamente para a análise da administração. Depois, informe matérias e qualificações para a análise.', submit: 'Criar minha conta de professor',
     fields: [NAME, EMAIL, field('biografia', 'Sua apresentação', 'textarea', { maxLength: 2000, help: 'Conte sobre sua experiência e sua forma de ensinar.' }),
       field('precoHora', 'Preço por hora (R$)', 'number', { min: 0.01, step: 0.01, inputMode: 'decimal' }), NEW_PASSWORD, ACCEPT],
     body: (v) => ({ nome: v.nome, email: v.email, senha: v.senha, biografia: v.biografia, precoHora: Number(v.precoHora) })
@@ -83,7 +83,7 @@ export default function auth(ctx) {
       onSubmit: async (v) => {
         await api(`/api/auth/registrar/${kind.kind}`, { method: 'POST', auth: false, body: kind.body(v) });
         form.controls.senha.value = '';
-        notice('Conta criada. Entre com seu e-mail e senha.'); location.hash = 'login';
+        notice(kind.kind === 'professor' ? 'Conta criada e candidatura enviada para análise. Entre com seu e-mail e senha.' : 'Conta criada. Entre com seu e-mail e senha.'); location.hash = 'login';
       }
     });
     extra = h('nav', { 'aria-label': 'Tipo de conta' }, h('p', { class: 'small' }, 'Criar conta como: ',

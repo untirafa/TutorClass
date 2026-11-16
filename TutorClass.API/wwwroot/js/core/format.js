@@ -78,3 +78,64 @@ export const typeLabel = (s) => ({
   Graduacao: 'Graduação', PosGraduacao: 'Pós-graduação', Curso: 'Curso', Certificacao: 'Certificação',
   Experiencia: 'Experiência', Outro: 'Outro', Exercicio: 'Atividade / exercício', Video: 'Vídeo', Documento: 'Documento'
 }[s] || s);
+
+/* ---------- Horário de Brasília (UTC-3, sem horário de verão desde 2019) ----------
+   A API guarda disponibilidades e aulas em UTC; a pessoa vê e digita sempre o horário de Brasília. */
+export const BRT_OFFSET_MIN = 180;
+export const WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const pad2 = (n) => String(n).padStart(2, '0');
+// "HH:MM[:SS]" -> minutos desde 00:00; "23:59:59" vale como fim do dia (1440).
+export function timeToMin(t) {
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(t ?? '')); if (!m) return NaN;
+  const min = Number(m[1]) * 60 + Number(m[2]);
+  return min === 1439 && Number(m[3] || 0) >= 59 ? 1440 : min;
+}
+export const minToTime = (min) => `${pad2(Math.floor(min / 60))}:${pad2(min % 60)}`;
+const dayAt = (day, shift) => WEEK[(((WEEK.indexOf(day) + shift) % 7) + 7) % 7];
+
+// Intervalo semanal digitado em Brasília -> 1 ou 2 registros em UTC (2 quando cruza a meia-noite UTC, às 21h de Brasília).
+export function brasiliaToUtcSlots(day, inicio, fim) {
+  const a = timeToMin(inicio) + BRT_OFFSET_MIN, b = timeToMin(fim) + BRT_OFFSET_MIN;
+  const slot = (d, x, y) => ({ diaSemana: d, inicio: `${minToTime(x)}:00`, fim: y >= 1440 ? '23:59:59' : `${minToTime(y)}:00` });
+  if (b <= 1440) return [slot(day, a, b)];
+  if (a >= 1440) return [slot(dayAt(day, 1), a - 1440, b - 1440)];
+  return [slot(day, a, 1440), slot(dayAt(day, 1), 0, b - 1440)];
+}
+// Registro semanal em UTC -> pedaços em Brasília ({ dia, ini, fim } em minutos).
+export function utcToBrasiliaPieces(row) {
+  const a = timeToMin(row.inicio) - BRT_OFFSET_MIN, b = timeToMin(row.fim) - BRT_OFFSET_MIN;
+  if (b <= 0) return [{ dia: dayAt(row.diaSemana, -1), ini: a + 1440, fim: b + 1440 }];
+  if (a >= 0) return [{ dia: row.diaSemana, ini: a, fim: b }];
+  return [{ dia: dayAt(row.diaSemana, -1), ini: a + 1440, fim: 1440 }, { dia: row.diaSemana, ini: 0, fim: b }];
+}
+// Disponibilidades da API -> grupos em Brasília, já juntando os pedaços que a divisão em UTC separou.
+export function brasiliaAvailability(rows) {
+  const pieces = [];
+  for (const row of rows || []) for (const p of utcToBrasiliaPieces(row)) pieces.push({ ...p, rows: [row] });
+  pieces.sort((x, y) => WEEK.indexOf(x.dia) - WEEK.indexOf(y.dia) || x.ini - y.ini);
+  const groups = [];
+  for (const p of pieces) {
+    const last = groups[groups.length - 1];
+    if (last && last.dia === p.dia && last.fim === p.ini) { last.fim = p.fim; last.rows.push(...p.rows); }
+    else groups.push({ ...p, rows: [...p.rows] });
+  }
+  return groups.map(g => ({ dia: g.dia, inicio: minToTime(g.ini), fim: minToTime(g.fim), rows: [...new Set(g.rows)] }));
+}
+export const brasiliaSlotText = (g) => `${dayLabel(g.dia)}: ${g.inicio} às ${g.fim} (horário de Brasília)`;
+
+// Data (AAAA-MM-DD) e hora de Brasília -> ISO em UTC. Recusa horários passados.
+export function brasiliaInputToIso(date, time, now = new Date()) {
+  if (!date || !time) throw new Error('Informe a data e o horário da aula.');
+  const d = new Date(`${date}T${time.slice(0, 5)}:00-03:00`);
+  if (!Number.isFinite(d.getTime())) throw new Error('Data ou horário inválido.');
+  if (d <= now) throw new Error('Escolha um horário futuro.');
+  return d.toISOString();
+}
+// ISO em UTC -> { date, time } em Brasília (para preencher formulários).
+export function isoToBrasiliaParts(iso) {
+  const d = new Date(new Date(iso).getTime() - BRT_OFFSET_MIN * 60000);
+  if (!Number.isFinite(d.getTime())) return { date: '', time: '' };
+  const s = d.toISOString(); return { date: s.slice(0, 10), time: s.slice(11, 16) };
+}
+// Data de hoje em Brasília (AAAA-MM-DD).
+export const todayBrasilia = (now = new Date()) => new Date(now.getTime() - BRT_OFFSET_MIN * 60000).toISOString().slice(0, 10);

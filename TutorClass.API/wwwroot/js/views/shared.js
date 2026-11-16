@@ -1,6 +1,6 @@
 // Peças reutilizadas por várias telas: planos, cartões de professor/aula/avaliação e utilitários.
 import { h } from '../core/dom.js';
-import { money, when, hhmm, statusLabel, typeLabel } from '../core/format.js';
+import { money, when, hhmm, statusLabel, typeLabel, brasiliaAvailability, brasiliaSlotText } from '../core/format.js';
 import { card, badge, stars, avatar, statusBadge, linkButton, link } from '../ui/components.js';
 import { session } from '../core/session.js';
 
@@ -72,13 +72,6 @@ export function qualificationCard(q) {
     h('p', { class: 'small' }, statusBadge(q.statusVerificacao)), q.descricao ? h('p', q.descricao) : null);
 }
 
-// Disponibilidade semanal exibida em UTC e Brasília (a API guarda em UTC).
-const SUNDAY = Date.UTC(2026, 10, 8); // domingo de referência
-export function weeklySlotText(d) {
-  const idx = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(d.diaSemana);
-  const at = (t) => new Date(SUNDAY + idx * 86400000 + (Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))) * 60000);
-  const day = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: 'America/Sao_Paulo' }).format(at(d.inicio));
-  const time = (t) => new Intl.DateTimeFormat('pt-BR', { timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(at(t));
-  return `${day.charAt(0).toUpperCase() + day.slice(1)}: ${time(d.inicio)} às ${time(d.fim)} (Brasília) · ${hhmm(d.inicio)}–${hhmm(d.fim)} UTC`;
-}
+// Disponibilidade semanal exibida em horário de Brasília (a API guarda em UTC).
+export const weeklySlotText = (d) => brasiliaAvailability([d]).map(brasiliaSlotText).join(' · ');
 export const isLoggedStudent = () => session.user?.perfil === 'Aluno';

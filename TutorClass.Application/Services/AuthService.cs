@@ -62,7 +62,18 @@ public sealed class AuthService
         professor.DefinirPasswordHash(_passwordHasher.HashPassword(professor, request.Senha));
         professor.AtualizarPerfilProfissional(request.Biografia, request.PrecoHora);
 
+        // A candidatura nasce junto com a conta: sem isso o cadastro nunca chegaria a fila de analise da administracao.
+        // A mensagem e a propria apresentacao do cadastro (a coluna aceita ate 1000 caracteres).
+        var apresentacao = request.Biografia.Trim();
+        if (apresentacao.Length > 1000)
+        {
+            apresentacao = apresentacao[..1000];
+        }
+
+        var candidatura = professor.SolicitarCandidatura(apresentacao);
+
         _db.AddEntity(professor);
+        _db.AddEntity(candidatura);
         await _db.SaveChangesAsync(cancellationToken);
         return ToDto(professor);
     }

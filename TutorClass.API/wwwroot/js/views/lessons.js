@@ -2,7 +2,7 @@
 import { h, mount } from '../core/dom.js';
 import { get, post, put, errorText, isAbort } from '../core/api.js';
 import { isStudent, isTeacher, isGuardian } from '../core/session.js';
-import { money, when, utcInputToIso, isoToUtcInput, brasiliaHint, estimateTotal, durationLabel } from '../core/format.js';
+import { money, when, brasiliaInputToIso, isoToBrasiliaParts, estimateTotal, durationLabel } from '../core/format.js';
 import { pageHeader, dl, emptyState, pagedList, statusBadge, btn, linkButton, card } from '../ui/components.js';
 import { field, optional, createForm } from '../ui/form.js';
 import { openDialog } from '../ui/dialog.js';
@@ -13,7 +13,8 @@ import { showFollowup, editFollowup } from './followups.js';
 
 export const PAYMENT_FIELD = field('formaPagamento', 'Forma de pagamento simulado', 'text', { options: [{ value: 'Pix', label: 'Pix' }, { value: 'Cartao', label: 'Cartão' }] });
 export const timeFields = (price) => [
-  field('inicio', 'Início da aula (UTC)', 'datetime-local', { help: 'Em UTC: 15:00 UTC = 12:00 em Brasília.', liveHint: brasiliaHint }),
+  field('data', 'Data da aula', 'date', { help: 'Em horário de Brasília.' }),
+  field('hora', 'Horário de início (Brasília)', 'time'),
   field('duracaoMinutos', 'Duração em minutos', 'number', { min: 30, max: 240, step: 1, value: 60, liveHint: (v) => { const t = estimateTotal(price, Number(v)); return t == null ? '' : `Total estimado: ${money(t)}`; } })
 ];
 const subjectName = (l) => (typeof l.materia === 'string' ? l.materia : l.materia?.nome);
@@ -56,9 +57,9 @@ export async function openLesson(idOrSummary, { reload, guardianOf } = {}) {
   if (isTeacher() && l.status === 'Solicitada') add(transition('confirmar', 'Confirmar aula'));
   if (isTeacher() && l.status === 'Confirmada') add(transition('concluir', 'Concluir aula'));
   if (open) {
-    add(btn('Reagendar', () => formDialog('Reagendar aula', timeFields(price), { inicio: isoToUtcInput(l.inicio), duracaoMinutos: l.duracaoMinutos },
-      async (v) => { await put(`${base}/reagendar`, { inicio: utcInputToIso(v.inicio), duracaoMinutos: v.duracaoMinutos }); refresh(); },
-      { description: 'Use um intervalo disponível do professor, em UTC. O pagamento já registrado é mantido.', success: 'Aula reagendada.' })));
+    add(btn('Reagendar', () => formDialog('Reagendar aula', timeFields(price), { data: isoToBrasiliaParts(l.inicio).date, hora: isoToBrasiliaParts(l.inicio).time, duracaoMinutos: l.duracaoMinutos },
+      async (v) => { await put(`${base}/reagendar`, { inicio: brasiliaInputToIso(v.data, v.hora), duracaoMinutos: v.duracaoMinutos }); refresh(); },
+      { description: 'Use um intervalo disponível do professor, em horário de Brasília. O pagamento já registrado é mantido.', success: 'Aula reagendada.' })));
     add(btn('Cancelar aula', () => formDialog('Cancelar aula', [optional('motivo', 'Motivo')], {},
       async (v) => { await post(`${base}/cancelar`, v); refresh(); },
       { description: 'Confirme o cancelamento desta aula.', save: 'Confirmar cancelamento', danger: true, success: 'Aula cancelada.' }), { kind: 'danger' }));

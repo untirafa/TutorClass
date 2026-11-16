@@ -28,6 +28,7 @@ async function login(email) {
   const book = page.getByRole('button', { name: /solicitar aula/i }).first();
   ok('aluno: botão de agendamento', await book.count() > 0);
   if (await book.count()) { await book.click(); ok('aluno: diálogo de agendamento', await page.locator('dialog[open]').count() === 1);
+    ok('aluno: calendário só com dias disponíveis, em horário de Brasília', await page.locator('dialog[open] .cal-day:not(:disabled)').count() > 0 && await page.locator('dialog[open] .cal-day:disabled').count() > 0 && !/UTC/.test(await page.locator('dialog[open]').innerText()));
     await page.keyboard.press('Escape'); ok('aluno: Esc fecha diálogo', await page.locator('dialog[open]').count() === 0); }
   ok('VLibras presente na tela', await page.locator('[vw] [vw-access-button]').count() === 1);
   // Avaliação do professor: botão no cartão da aula concluída e no perfil do professor

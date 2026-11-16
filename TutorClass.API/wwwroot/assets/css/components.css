@@ -202,3 +202,14 @@ thead th { background: var(--surface-2); }
 .faq-bar { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: end; }
 .faq-bar .field-grow { flex: 1 1 14rem; min-width: 0; }
 .faq-bar input { width: 100%; }
+
+/* Calendário de horários livres: só os dias com horário do professor ficam habilitados */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.cal-title { margin: 0; font-size: 1.05rem; text-align: center; flex: 1; }
+.cal-head .btn { min-width: var(--target); padding-inline: var(--space-3); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .25rem; }
+.cal-wd { text-align: center; font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; padding: .25rem 0; }
+.cal-day { min-height: var(--target); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.cal-day:hover:not(:disabled) { background: var(--primary-soft); }
+.cal-day:disabled { border-style: dashed; border-color: var(--line); background: transparent; color: var(--muted); font-weight: 400; cursor: not-allowed; opacity: .6; text-decoration: line-through; }
+.cal-day[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }

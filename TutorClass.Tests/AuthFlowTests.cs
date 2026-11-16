@@ -74,6 +74,27 @@ public sealed class AuthFlowTests
     }
 
     [Fact]
+    public async Task Cadastro_de_professor_envia_candidatura_pendente_para_analise_da_administracao()
+    {
+        await using var factory = new TutorClassApiFactory();
+        var client = factory.CreateClient();
+        var apresentacao = new string('a', 1500);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/registrar/professor",
+            new RegistrarProfessorRequest("Professor Fila", "professor.fila@teste.local", "TutorClass@123", apresentacao, 90));
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TutorClassDbContext>();
+        var professor = db.Professores.Single(p => p.Email == "professor.fila@teste.local");
+        var candidatura = Assert.Single(db.CandidaturasProfessor.Where(c => c.ProfessorId == professor.Id));
+
+        Assert.Equal(StatusCandidaturaProfessor.Pendente, candidatura.Status);
+        Assert.Equal(1000, candidatura.Mensagem.Length);
+    }
+
+    [Fact]
     public async Task Login_invalido_falha()
     {
         await using var factory = new TutorClassApiFactory();

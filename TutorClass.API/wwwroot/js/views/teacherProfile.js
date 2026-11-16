@@ -46,7 +46,8 @@ export default async function teacherProfile(ctx) {
     section('Candidatura',
       candidaturas.length ? h('div', { class: 'stack' }, candidaturas.map(c => card({ title: `Candidatura · ${statusLabel(c.status)}` }, statusBadge(c.status),
         dl({ Apresentação: c.mensagem, 'Retorno da análise': c.motivo, 'Data da análise': when(c.dataAnaliseUtc) })))) : emptyState('Você ainda não enviou candidatura.'),
-      last && last.status !== 'Reprovada' && last.status !== 'AguardandoDocumentacao' ? h('p', { class: 'muted small' }, 'Sua candidatura está em andamento. Você será avisado por notificação.') : null,
-      btn(candidaturas.length ? 'Enviar nova candidatura' : 'Enviar candidatura', () => formDialog('Candidatura a professor', [field('mensagem', 'Apresentação para análise', 'textarea', { maxLength: 2000 })], {},
+      last && ['Pendente', 'EmAnalise'].includes(last.status) ? h('p', { class: 'muted small' }, 'Sua candidatura está com a administração. Você será avisado por notificação.') : null,
+      last?.status === 'AguardandoDocumentacao' ? h('p', { class: 'muted small' }, 'A administração pediu complementação: confira o retorno acima, adicione matérias e qualificações e aguarde a nova análise.') : null,
+      ['Pendente', 'EmAnalise', 'AguardandoDocumentacao'].includes(last?.status) ? null : btn(candidaturas.length ? 'Enviar nova candidatura' : 'Enviar candidatura', () => formDialog('Candidatura a professor', [field('mensagem', 'Apresentação para análise', 'textarea', { maxLength: 1000 })], {},
         async (v) => { await post(`/api/professores/${uid}/candidaturas`, v); reload(); }, { success: 'Candidatura enviada. Acompanhe a situação nesta página.' }), { kind: 'primary' })));
 }

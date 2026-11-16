@@ -1,7 +1,7 @@
 // Entrar e criar conta (Aluno, Professor, Responsável). O perfil de quem entra é definido pela API.
 import { h, mount } from '../core/dom.js';
 import { api, get, errorText } from '../core/api.js';
-import { session, resetSession } from '../core/session.js';
+import { session, resetSession, persistSession } from '../core/session.js';
 import { announce } from '../core/a11y.js';
 import { createForm, field, optional } from '../ui/form.js';
 import { notice } from '../ui/toast.js';
@@ -52,6 +52,7 @@ export async function completeLogin(token) {
     const user = await get('/api/auth/me');
     if (!user?.id || !user.nome || !user.perfil) throw new Error('A API não retornou os dados da conta autenticada.');
     session.user = user;
+    persistSession();
   } catch (error) { resetSession(); throw error; }
 }
 

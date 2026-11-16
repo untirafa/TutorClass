@@ -1,6 +1,6 @@
 // Ponto de entrada: configura a API, carrega preferências de acessibilidade, liga o roteador e a casca.
-import { configure, session, isSignedIn, onSessionReset, resetSession, role } from './core/session.js';
-import { setExpiredHandler } from './core/api.js';
+import { configure, session, isSignedIn, onSessionReset, resetSession, role, storedToken } from './core/session.js';
+import { setExpiredHandler, restoreSession } from './core/api.js';
 import { loadPrefs, announce, focusHeading } from './core/a11y.js';
 import { createRouter, match } from './core/router.js';
 import { h, mount } from './core/dom.js';
@@ -96,6 +96,8 @@ setExpiredHandler((message) => logout(message || 'Sua sessão expirou. Entre nov
 onSessionReset(() => { document.body.classList.remove('in-app'); });
 try { configure(); } catch (error) { mount(main, h('div', { class: 'container' }, errorState(error.message))); throw error; }
 setupSkipLinks();
+// F5 não encerra a sessão: reabre com o token guardado na aba (a API pode demorar a acordar, então mostra o carregamento).
+if (storedToken()) { mount(main, h('div', { class: 'container' }, loading())); await restoreSession(); }
 router = createRouter(ROUTES, onRoute);
 globalThis.TutorClassApp = Object.freeze({ router, session: { get signedIn() { return isSignedIn(); } } });
 router.start();

@@ -21,6 +21,9 @@ async function login(email) {
   ok('aluno: painel', /bom ter você|olá|painel/i.test(await page.locator('main h1').first().innerText()));
   await page.goto(base + '/#app/professores'); await page.waitForSelector('main article a'); await page.waitForTimeout(300);
   ok('aluno: lista de professores', await page.locator('main article').count() > 0);
+  // F5 não pode encerrar a sessão (o token fica em sessionStorage, só na aba).
+  await page.reload(); await page.waitForSelector('main article a');
+  ok('aluno: F5 mantém a sessão e a tela', /#app\/professores/.test(page.url()) && await page.locator('main article').count() > 0);
   await page.locator('main article a').first().click(); await page.waitForSelector('main [role=tablist], main button:has-text("Solicitar aula")');
   const book = page.getByRole('button', { name: /solicitar aula/i }).first();
   ok('aluno: botão de agendamento', await book.count() > 0);

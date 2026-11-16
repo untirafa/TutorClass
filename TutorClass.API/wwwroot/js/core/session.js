@@ -1,5 +1,6 @@
-// Estado da sessão. O JWT existe somente em memória: recarregar a página encerra a sessão.
-// Nada sensível é gravado em localStorage/sessionStorage/cookies.
+// Estado da sessão. O JWT fica em memória e uma cópia em sessionStorage (somente a aba atual), para que
+// recarregar a página (F5) não encerre a sessão. Fechar a aba ou o aplicativo descarta a cópia; a senha nunca é
+// gravada, nada vai para localStorage ou cookies, e a cópia é apagada no logout, na expiração e em 401.
 import { normalizeBaseUrl } from './http.js';
 
 export const session = {
@@ -18,10 +19,19 @@ export const isGuardian = () => role() === 'Responsavel';
 export const isAdmin = () => role() === 'Administrador';
 export const isSignedIn = () => !!(session.token && session.user);
 
+const STORAGE_KEY = 'tutorclass.sessao';
+const store = () => { try { return globalThis.sessionStorage ?? null; } catch { return null; } };
+export function storedToken() {
+  try { const value = store()?.getItem(STORAGE_KEY); return typeof value === 'string' && value.trim() ? value : null; } catch { return null; }
+}
+export function persistSession() { try { if (session.token) store()?.setItem(STORAGE_KEY, session.token); } catch { /* sem armazenamento: a sessão vale só até recarregar */ } }
+export function clearStoredSession() { try { store()?.removeItem(STORAGE_KEY); } catch { /* ignora */ } }
+
 const hooks = new Set();
 export const onSessionReset = (fn) => { hooks.add(fn); return () => hooks.delete(fn); };
 export function resetSession() {
   session.epoch++;
+  clearStoredSession();
   session.token = null; session.user = null; session.tutorHistory = []; session.returnTo = null;
   session.tutorStream?.abort(); session.tutorStream = null;
   for (const fn of hooks) { try { fn(); } catch { /* observador não deve impedir o logout */ } }

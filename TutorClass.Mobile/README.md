@@ -219,4 +219,7 @@ O aplicativo passou a abrir a própria interface Web do TutorClass (`https://tut
 - `AppConfig.BaseUrl` concentra o endereço (usado pela WebView e pelo `HttpClient`).
 - Ícone e tela de abertura usam a estrela do TutorClass sobre o verde da marca.
 - As telas nativas anteriores (Login, Home, Professores etc.) e seus ViewModels/serviços continuam no projeto, com seus testes, mas não são mais a tela inicial.
-- A sessão (JWT) fica na memória da página Web, como no navegador: ao fechar o app é preciso entrar novamente.
+- A sessão (JWT) fica na memória da página Web e numa cópia em `sessionStorage` (somente nesta aba/WebView): atualizar a página (F5) não desloga, mas ao fechar o app é preciso entrar novamente.
+- Horários: a interface mostra e recebe somente o horário de Brasília (a API guarda em UTC e a conversão é feita pela interface Web). O agendamento usa um calendário que habilita apenas os dias e horários realmente disponíveis do professor.
+- Sincronia com a Web: ao abrir, a `WebView` limpa o cache HTTP antigo (uma vez por abertura do app e em "Tentar novamente") antes de carregar o site, para o aplicativo sempre exibir a versão publicada. Versão do app: 1.1 (código 2).
+- Vínculo responsável–aluno: o responsável informa o nome completo de um aluno já cadastrado e a administração analisa o pedido (tela "Vínculos de responsáveis" no perfil Administrador).

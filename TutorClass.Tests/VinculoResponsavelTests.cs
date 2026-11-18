@@ -41,6 +41,27 @@ public sealed class VinculoResponsavelTests
     }
 
     [Fact]
+    public async Task Solicitacao_so_e_aceita_para_aluno_ja_cadastrado_com_nome_completo()
+    {
+        await using var db = CreateDbContext();
+        var cenario = Seed(db);
+        var service = CreateService(db);
+
+        var ex = await Assert.ThrowsAsync<DomainException>(() =>
+            service.SolicitarAsync(cenario.ResponsavelId, new SolicitarVinculoRequest("Maria Inexistente Silva", "Mae"), CancellationToken.None));
+        Assert.Contains("Nao encontramos", ex.Message);
+        // Nome parcial de aluno existente tambem nao vale: e preciso o nome completo cadastrado.
+        await Assert.ThrowsAsync<DomainException>(() =>
+            service.SolicitarAsync(cenario.ResponsavelId, new SolicitarVinculoRequest("Ana Clara", "Mae"), CancellationToken.None));
+        Assert.Empty(db.SolicitacoesVinculoResponsavel);
+        Assert.DoesNotContain(db.Notificacoes, n => n.Tipo == TipoNotificacao.NovaSolicitacaoVinculo);
+
+        // Caixa e acentos sao ignorados.
+        var ok = await service.SolicitarAsync(cenario.ResponsavelId, new SolicitarVinculoRequest("ANA CLARA SOUZA", "Mae"), CancellationToken.None);
+        Assert.Equal(StatusSolicitacaoVinculo.Pendente, ok.Status);
+    }
+
+    [Fact]
     public async Task Somente_responsavel_ativo_pode_solicitar_vinculo()
     {
         await using var db = CreateDbContext();

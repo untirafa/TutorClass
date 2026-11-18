@@ -30,6 +30,14 @@ public sealed class VinculoResponsavelService
         var solicitacao = new SolicitacaoVinculoResponsavel(responsavelId, request.NomeAluno, request.Parentesco);
         var chave = Normalizar(solicitacao.NomeAlunoInformado);
 
+        // Somente alunos que ja possuem conta ativa podem ser vinculados: o nome precisa ser o nome completo cadastrado.
+        var existeAluno = _db.Usuarios.OfType<Aluno>().Where(a => a.Ativo).Select(a => a.Nome).ToArray()
+            .Any(nome => Normalizar(nome) == chave);
+        if (!existeAluno)
+        {
+            throw new DomainException("Nao encontramos um aluno cadastrado com este nome completo. Confira a grafia ou peca para o aluno criar a conta antes de solicitar o vinculo.");
+        }
+
         var pendentes = _db.SolicitacoesVinculoResponsavel
             .Where(s => s.ResponsavelId == responsavelId && s.Status == StatusSolicitacaoVinculo.Pendente)
             .ToArray();

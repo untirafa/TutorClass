@@ -16,7 +16,7 @@ export async function listModule(ctx) {
     get('/api/responsavel/solicitacoes-vinculo', { signal: ctx.signal }).catch(() => [])
   ]);
   const askLink = () => formDialog('Solicitar vínculo com aluno', [
-    field('nomeAluno', 'Nome completo do aluno', 'text', { minLength: 5, maxLength: 200, autocomplete: 'off', help: 'Digite o nome e o sobrenome como o aluno aparece no cadastro do TutorClass.',
+    field('nomeAluno', 'Nome completo do aluno', 'text', { minLength: 5, maxLength: 200, autocomplete: 'off', help: 'Só é possível vincular alunos que já têm conta. Digite o nome completo exatamente como o aluno se cadastrou no TutorClass.',
       validate: (v) => /\S+\s+\S+/.test(v.trim()) ? '' : 'Informe o nome completo (nome e sobrenome).' }),
     field('parentesco', 'Parentesco', 'text', { required: false, maxLength: 80, placeholder: 'Ex.: Mãe, Pai, Avó', autocomplete: 'off' })], {},
   async (v) => { await post('/api/responsavel/solicitacoes-vinculo', { nomeAluno: v.nomeAluno.trim(), parentesco: (v.parentesco || '').trim() || null }); ctx.router.refresh(); },

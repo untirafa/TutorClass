@@ -121,6 +121,10 @@ for (const [email, mods] of [['responsavel@teste.dev', ['inicio', 'vinculados', 
   await g.page.locator('dialog[open] input[name=nomeAluno]').fill('Pedro');
   await g.page.locator('dialog[open]').getByRole('button', { name: /enviar para análise/i }).click();
   ok('vínculo: nome incompleto é recusado', await g.page.locator('dialog[open]').count() === 1 && /nome completo/i.test(await g.page.locator('dialog[open]').innerText()));
+  await g.page.locator('dialog[open] input[name=nomeAluno]').fill('Maria Inexistente Silva');
+  await g.page.locator('dialog[open]').getByRole('button', { name: /enviar para análise/i }).click();
+  await g.page.waitForTimeout(600);
+  ok('vínculo: aluno inexistente é recusado', await g.page.locator('dialog[open]').count() === 1 && /não encontramos um aluno|nao encontramos um aluno/i.test(await g.page.locator('dialog[open]').innerText()));
   await g.page.locator('dialog[open] input[name=nomeAluno]').fill('Pedro Souza');
   await g.page.locator('dialog[open] input[name=parentesco]').fill('Pai');
   await g.page.locator('dialog[open]').getByRole('button', { name: /enviar para análise/i }).click();
@@ -135,7 +139,8 @@ for (const [email, mods] of [['responsavel@teste.dev', ['inicio', 'vinculados', 
   ok('vínculo: aprovação muda a situação', /Aprovada/.test(await a.page.locator('main').innerText()) || /Nenhuma solicitação/.test(await a.page.locator('main').innerText()));
   await g.page.reload(); await g.page.waitForSelector('main article'); await g.page.waitForTimeout(400);
   ok('vínculo: aluno aprovado aparece para o responsável', await g.page.locator('main article:has-text("Pedro Souza") a:has-text("Acompanhar")').count() === 1);
-  ok('vínculo: sem erros de página', g.errors.length === 0 && a.errors.length === 0, [...g.errors, ...a.errors].join(' | '));
+  const erros = [...g.errors, ...a.errors].filter(e => !/status of 400/.test(e)); // o 400 do aluno inexistente é esperado
+  ok('vínculo: sem erros de página', erros.length === 0, erros.join(' | '));
   await g.ctx.close(); await a.ctx.close();
 }
 {

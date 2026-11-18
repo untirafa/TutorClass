@@ -148,7 +148,10 @@ async function api(req, res, url) {
   if (p.match(/^\/api\/professores\/[^/]+\/qualificacoes$/)) return send(res, 200, quals);
   // responsável
   if (p === '/api/responsavel/solicitacoes-vinculo') {
-    if (m === 'POST') { const r0 = { id: id(), responsavelId: resp.id, nomeAlunoInformado: b.nomeAluno, parentesco: b.parentesco || 'Nao informado', status: 'Pendente', motivo: null, alunoId: null, createdAtUtc: iso(Date.now()), analisadaEmUtc: null }; vinculoReqs.push(r0); return send(res, 201, r0); }
+    if (m === 'POST') {
+      const alvo = String(b.nomeAluno || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      if (!users.some(u => u.perfil === 'Aluno' && u.nome.toLowerCase() === alvo)) return send(res, 400, { error: 'Nao encontramos um aluno cadastrado com este nome completo. Confira a grafia ou peca para o aluno criar a conta antes de solicitar o vinculo.' });
+      const r0 = { id: id(), responsavelId: resp.id, nomeAlunoInformado: b.nomeAluno, parentesco: b.parentesco || 'Nao informado', status: 'Pendente', motivo: null, alunoId: null, createdAtUtc: iso(Date.now()), analisadaEmUtc: null }; vinculoReqs.push(r0); return send(res, 201, r0); }
     return send(res, 200, vinculoReqs);
   }
   if (p === '/api/admin/solicitacoes-vinculo') return send(res, 200, vinculoReqs.map(v => ({ ...v, responsavelNome: resp.nome, responsavelEmail: resp.email, alunoNome: users.find(u => u.id === v.alunoId)?.nome ?? null,

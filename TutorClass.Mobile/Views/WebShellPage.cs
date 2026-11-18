@@ -12,6 +12,8 @@ public sealed class WebShellPage : ContentPage
     private readonly Label loadingText;
     private readonly Grid offline;
     private bool failed;
+    private bool started;
+    private static bool cacheCleared;
 
     public WebShellPage()
     {
@@ -21,7 +23,6 @@ public sealed class WebShellPage : ContentPage
 
         web = new WebView
         {
-            Source = new UrlWebViewSource { Url = Services.AppConfig.BaseUrl },
             BackgroundColor = Color.FromArgb("#0B1322"), // mesmo fundo do tema escuro do site: evita o clarão branco ao abrir
             AutomationId = "TutorClassWeb"
         };
@@ -53,7 +54,7 @@ public sealed class WebShellPage : ContentPage
             BackgroundColor = Colors.White, TextColor = Verde, CornerRadius = 12, MinimumHeightRequest = 52,
             HorizontalOptions = LayoutOptions.Fill
         };
-        retry.Clicked += (_, _) => Load();
+        retry.Clicked += (_, _) => { ConfigureNative(forceClear: true); Load(); };
         offline = new Grid
         {
             BackgroundColor = Verde, IsVisible = false,
@@ -73,7 +74,30 @@ public sealed class WebShellPage : ContentPage
         };
 
         Content = new Grid { Children = { web, loading, offline } };
-        Load();
+
+        // A pagina so e carregada depois que a WebView nativa existe e o cache antigo foi limpo: assim o aplicativo
+        // sempre abre a versao mais recente do site (mesmos horarios de Brasilia, calendario e telas da versao Web).
+        web.HandlerChanged += (_, _) =>
+        {
+            if (started || web.Handler is null) return;
+            started = true;
+            ConfigureNative(forceClear: false);
+            Load();
+        };
+    }
+
+    private void ConfigureNative(bool forceClear)
+    {
+#if ANDROID
+        if (web.Handler?.PlatformView is not Android.Webkit.WebView native) return;
+        native.Settings.JavaScriptEnabled = true;
+        native.Settings.DomStorageEnabled = true; // sessionStorage: a sessao sobrevive ao recarregar a pagina, como na Web
+        if (forceClear || !cacheCleared)
+        {
+            native.ClearCache(true);
+            cacheCleared = true;
+        }
+#endif
     }
 
     private void Load()
